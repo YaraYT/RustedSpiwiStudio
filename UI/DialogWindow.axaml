@@ -1,0 +1,11 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="RustedShpizhionStudio.UI.DialogWindow" Width="560" Height="270" CanResize="False" WindowStartupLocation="CenterOwner" WindowDecorations="None">
+  <Border Background="#15181E" Padding="22">
+    <Grid RowDefinitions="*,Auto">
+      <TextBlock x:Name="Message" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="15" />
+      <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button x:Name="NoButton" Content="Нет" Click="No_Click" IsVisible="False" />
+        <Button x:Name="YesButton" Classes="primary" Content="Да" Click="Yes_Click" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

@@ -1,0 +1,86 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:RustedShpizhionStudio.UI"
+        x:Class="RustedShpizhionStudio.UI.ChangelogWindow"
+        x:DataType="local:ChangelogWindow"
+        Title="Что нового"
+        Width="760" Height="680"
+        MinWidth="560" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        WindowDecorations="None">
+  <Window.Styles>
+    <Style Selector="Border.version-badge">
+      <Setter Property="Background" Value="#2A3240" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="8,3" />
+    </Style>
+    <Style Selector="TextBlock.change-item">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="#C8CDD8" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+  </Window.Styles>
+
+  <Border Background="#13161C" BorderBrush="#2B3441" BorderThickness="1" CornerRadius="12">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <Border Grid.Row="0" Background="#181B22" BorderBrush="#262B35" BorderThickness="0,0,0,1" Padding="22,16">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel PointerPressed="Header_PointerPressed" Spacing="3">
+            <TextBlock Text="Что нового" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" Text="История релизов загружается напрямую из GitHub Releases." FontSize="12" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="secondary" Content="Закрыть" Click="Close_Click" />
+        </Grid>
+      </Border>
+
+      <ScrollViewer Grid.Row="1" Padding="18,14" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="10">
+          <Border Background="#1B2028" BorderBrush="#2B3441" BorderThickness="1" CornerRadius="8" Padding="12" IsVisible="{Binding UpdateBannerVisible}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBlock Text="{Binding UpdateBannerText}" Foreground="{Binding UpdateBannerForeground}" TextWrapping="Wrap" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="secondary" Content="Проверить обновление" Click="CheckUpdate_Click" />
+            </Grid>
+          </Border>
+
+          <ItemsControl ItemsSource="{Binding Entries}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="local:ChangelogEntryViewModel">
+                <Border Background="#1B1F27" CornerRadius="8" Padding="14,12">
+                  <StackPanel Spacing="9">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Border Classes="version-badge">
+                        <TextBlock Text="{Binding Version}" FontSize="13" FontWeight="SemiBold" Foreground="#7AB8FF" />
+                      </Border>
+                      <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Date}" FontSize="11" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Text="{Binding ReleaseTitle}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{Binding Items}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <Grid ColumnDefinitions="14,*" Margin="0,1">
+                            <TextBlock Text="•" Foreground="#4CD97B" FontSize="13" VerticalAlignment="Top" />
+                            <TextBlock Grid.Column="1" Classes="change-item" Text="{Binding}" Margin="4,0,0,0" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Classes="secondary" Content="Открыть релиз на GitHub" Tag="{Binding HtmlUrl}" IsVisible="{Binding CanOpenRelease}" Click="OpenRelease_Click" HorizontalAlignment="Left" Padding="10,5" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Border Grid.Row="2" Background="#181B22" BorderBrush="#262B35" BorderThickness="0,1,0,0" Padding="18,10">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <TextBlock Classes="muted" Text="{Binding FooterText}" FontSize="11" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="secondary" Content="Открыть лог" Click="OpenLog_Click" />
+          <Button Grid.Column="2" Classes="primary" Content="Проверить обновление" Click="CheckUpdate_Click" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</Window>

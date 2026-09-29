@@ -1,0 +1,33 @@
+global using System.Collections.ObjectModel;
+global using System.Runtime.InteropServices;
+global using System.Collections.Specialized;
+global using System.ComponentModel;
+global using System.Diagnostics;
+global using System.Globalization;
+global using System.IO.Compression;
+global using System.Net;
+global using System.Net.Http;
+global using System.Security.Cryptography;
+global using System.Text;
+global using System.Text.Json;
+global using System.Text.Json.Serialization;
+global using System.Text.RegularExpressions;
+global using Avalonia;
+global using Avalonia.Animation;
+global using Avalonia.Controls;
+global using Avalonia.Controls.Templates;
+global using Avalonia.Interactivity;
+global using Avalonia.Input;
+global using Avalonia.Input.Platform;
+global using Avalonia.Media;
+global using Avalonia.Media.Imaging;
+global using Avalonia.Platform;
+global using Avalonia.Platform.Storage;
+global using Microsoft.Data.Sqlite;
+global using RustedShpizhionStudio.Core;
+global using RustedShpizhionStudio.Services;
+
+global using Avalonia.Controls.ApplicationLifetimes;
+global using Avalonia.Markup.Xaml;
+
+global using Avalonia.Threading;

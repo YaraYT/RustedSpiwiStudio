@@ -1,0 +1,38 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:RustedShpizhionStudio.UI"
+        x:Class="RustedShpizhionStudio.UI.UpdatePromptWindow"
+        x:DataType="local:UpdatePromptWindow"
+        Width="560" Height="360" MinWidth="500" MinHeight="320"
+        CanResize="False" WindowStartupLocation="CenterOwner" WindowDecorations="None">
+  <Border Background="#15181E" BorderBrush="#2B3441" BorderThickness="1" CornerRadius="12" Padding="22">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+        <StackPanel PointerPressed="Header_PointerPressed">
+          <TextBlock Text="Доступно обновление" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Classes="muted" Text="Новая версия найдена через GitHub Releases" FontSize="12" />
+        </StackPanel>
+        <Border Grid.Column="1" Background="#202B3A" CornerRadius="7" Padding="10,5">
+          <TextBlock Text="{Binding VersionText}" Foreground="#7AB8FF" FontWeight="SemiBold" />
+        </Border>
+      </Grid>
+
+      <Border Grid.Row="1" Background="#1B2028" BorderBrush="#2B3441" BorderThickness="1" CornerRadius="9" Padding="12">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding ReleaseTitle}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Classes="muted" Text="{Binding AssetText}" FontSize="11" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <TextBlock Text="{Binding ReleaseNotes}" Classes="muted" TextWrapping="Wrap" LineHeight="20" />
+      </ScrollViewer>
+
+      <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+        <TextBlock Text="{Binding StatusText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Button Grid.Column="1" Classes="secondary" Content="Позже" Click="Later_Click" IsEnabled="{Binding ButtonsEnabled}" />
+        <Button Grid.Column="2" Classes="primary" Content="Обновиться" Click="Update_Click" IsEnabled="{Binding UpdateButtonEnabled}" />
+      </Grid>
+    </Grid>
+  </Border>
+</Window>

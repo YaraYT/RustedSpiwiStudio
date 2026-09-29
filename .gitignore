@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+index.db
+config.json
+rwmod-cache/
+
+config.json.*.tmp
+index.db-wal
+index.db-shm
+config.json.bak

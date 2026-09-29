@@ -1,0 +1,113 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="RustedShpizhionStudio.UI.SettingsWindow"
+        Width="700" Height="800" MinWidth="560" MinHeight="560"
+        CanResize="False" WindowStartupLocation="CenterOwner"
+        WindowDecorations="None"
+        Title="Настройки Rusted Шпижион Студия">
+  <Border Background="#15181E" BorderBrush="#2A303B" BorderThickness="1" Padding="18">
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14">
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="2">
+          <TextBlock Text="Настройки" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Classes="muted" Text="Параметры интерфейса и сканирования" />
+        </StackPanel>
+        <Button Grid.Column="1" Classes="secondary" Content="×" FontSize="18" Padding="10,4" Click="Cancel_Click" />
+      </Grid>
+
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="12">
+          <Border Background="#1B1F27" BorderBrush="#272D38" BorderThickness="1" CornerRadius="8" Padding="14">
+            <StackPanel Spacing="9">
+              <TextBlock Text="Источник" FontSize="16" FontWeight="SemiBold" />
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Выбрать…" Margin="8,0,0,0" Click="Browse_Click" />
+                <TextBox x:Name="RootBox" PlaceholderText="Папка mods/units" />
+              </DockPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Background="#1B1F27" BorderBrush="#272D38" BorderThickness="1" CornerRadius="8" Padding="14">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Производительность" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="Больше параллельных задач ускоряют индексацию, но увеличивают нагрузку на CPU, RAM и диск." TextWrapping="Wrap" />
+              <CheckBox x:Name="ParallelIndexingBox" Content="Разрешить параллельную индексацию" />
+              <Grid ColumnDefinitions="*,180" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                <TextBlock Text="Параллельных задач индексирования" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Column="1" x:Name="IndexParallelismBox" Minimum="1" Maximum="128" Increment="1" Value="4" FormatString="0" />
+                <TextBlock Grid.Row="1" Text="Параллельных вычислений / парсинга" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="1" Grid.Column="1" x:Name="ComputeParallelismBox" Minimum="1" Maximum="128" Increment="1" Value="4" FormatString="0" />
+              </Grid>
+              <Border Background="#241E13" BorderBrush="#5A4520" BorderThickness="1" CornerRadius="6" Padding="10">
+                <TextBlock Classes="muted" Text="При включённой параллельности во время индексации компьютер может заметно замедлиться или временно перестать нормально реагировать на управление." TextWrapping="Wrap" />
+              </Border>
+              <Border Background="#271719" BorderBrush="#5C292E" BorderThickness="1" CornerRadius="6" Padding="10">
+                <StackPanel Spacing="7">
+                  <CheckBox x:Name="DangerousModeBox" Content="Опасный режим" />
+                  <TextBlock Classes="muted" Text="Максимальная загрузка CPU, повышенный приоритет процесса и агрессивный SQLite-кэш в оперативной памяти. Windows и другие программы могут стать заметно менее отзывчивыми." TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <Border Background="#1B1F27" BorderBrush="#272D38" BorderThickness="1" CornerRadius="8" Padding="14">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Отображение" FontSize="16" FontWeight="SemiBold" />
+              <Grid ColumnDefinitions="*,180" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                <TextBlock Text="Оконный режим" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" x:Name="WindowModeBox">
+                  <ComboBoxItem Content="Окно, на весь рабочий экран" Tag="windowed" />
+                  <ComboBoxItem Content="Окно без рамки" Tag="borderless" />
+                  <ComboBoxItem Content="Полноэкранный режим" Tag="fullscreen" />
+                </ComboBox>
+                <TextBlock Grid.Row="1" Text="Карточек в ряд / режим" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="LayoutBox">
+                  <ComboBoxItem Content="2 карточки" Tag="grid-2" />
+                  <ComboBoxItem Content="3 карточки" Tag="grid-3" />
+                  <ComboBoxItem Content="4 карточки" Tag="grid-4" />
+                  <ComboBoxItem Content="5 карточек" Tag="grid-5" />
+                  <ComboBoxItem Content="Списком, по линиям" Tag="list" />
+                </ComboBox>
+                <TextBlock Grid.Row="2" Text="Изображений на один шаг" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="2" Grid.Column="1" x:Name="PageSizeBox" Minimum="50" Maximum="1000" Increment="50" Value="250" FormatString="0" />
+                <TextBlock Grid.Row="3" Text="Свободная область вокруг изображения" VerticalAlignment="Center" />
+                <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*,48" ColumnSpacing="8" MinWidth="180">
+                  <Slider x:Name="PaddingBox" Minimum="2" Maximum="35" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" MinWidth="42">
+                    <TextBlock x:Name="PaddingText" Classes="muted" HorizontalAlignment="Center" />
+                  </Border>
+                </Grid>
+                <TextBlock Grid.Row="4" Text="Нормализация изображения" VerticalAlignment="Center" />
+                <CheckBox Grid.Row="4" Grid.Column="1" x:Name="NormalizeBox" Content="Включена" />
+                <TextBlock Grid.Row="5" Text="Анимации интерфейса" VerticalAlignment="Center" />
+                <CheckBox Grid.Row="5" Grid.Column="1" x:Name="ShowAnimationsBox" Content="Показывать" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border Background="#1B1F27" BorderBrush="#272D38" BorderThickness="1" CornerRadius="8" Padding="14">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Сканирование и предпросмотр" FontSize="16" FontWeight="SemiBold" />
+              <CheckBox x:Name="RwmodBox" Content="Предлагать распаковку .rwmod" />
+              <CheckBox x:Name="HideBrokenBox" Content="Не отображать битые ссылки" />
+            </StackPanel>
+          </Border>
+
+          <Border Background="#26191B" BorderBrush="#5C292E" BorderThickness="1" CornerRadius="8" Padding="14">
+            <StackPanel Spacing="8">
+              <TextBlock Text="База индекса" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="Удаляет index.db и связанные WAL/SHM-файлы из корневой папки программы. Настройки и ресурсы программы не удаляются." TextWrapping="Wrap" />
+              <Button Classes="danger" Content="Уничтожить базу индекса" Click="DeleteDatabase_Click" HorizontalAlignment="Left" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+        <TextBlock Grid.Column="0" x:Name="StatusText" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Content="Отмена" Click="Cancel_Click" />
+        <Button Grid.Column="2" Classes="primary" Content="Сохранить" Click="Save_Click" />
+      </Grid>
+    </Grid>
+  </Border>
+</Window>

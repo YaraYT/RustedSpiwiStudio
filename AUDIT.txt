@@ -1,0 +1,10 @@
+C# files: 27
+Raw-string delimiter pairs:
+
+Value ?? occurrences:
+  UI/SettingsWindow.axaml.cs | 120 | _config.ImagePageSize = (int)Math.Round(PageSizeBox.Value ?? _config.ImagePageSize);
+  UI/SettingsWindow.axaml.cs | 129 | _config.IndexParallelism = Math.Clamp((int)Math.Round(IndexParallelismBox.Value ?? _config.IndexParallelism), 1, Math.Max(1, Environment.ProcessorCount));
+  UI/SettingsWindow.axaml.cs | 130 | _config.ComputeParallelism = Math.Clamp((int)Math.Round(ComputeParallelismBox.Value ?? _config.ComputeParallelism), 1, Math.Max(1, Environment.ProcessorCount));
+
+AXAML XML parsed: 5
+XAML event handlers checked: 5
