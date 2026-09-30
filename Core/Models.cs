@@ -87,6 +87,14 @@ public static class AppChangelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries =
     [
+        new("0.1.3", "1 октября 2026",
+        [
+            "Исправлена причина падения при старте из-за недоступной native-библиотеки libSkiaSharp.",
+            "Сборка больше не использует Native AOT и aggressive trimming для повышения совместимости.",
+            "Native-библиотеки SkiaSharp и HarfBuzz теперь встраиваются в single-file публикацию.",
+            "Workflow сборки и автоматического релиза синхронизированы с новым профилем публикации.",
+            "Добавлена проверка релизной сборки: критические native DLL не должны оставаться рядом с EXE."
+        ]),
         new("0.1.2", "1 октября 2026",
         [
             "Исправлено падение окна «Что нового» в режиме invariant globalization.",

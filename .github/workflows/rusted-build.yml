@@ -32,9 +32,10 @@ jobs:
           -c Release
           -r win-x64
           --self-contained true
-          -p:PublishAot=true
+          -p:PublishAot=false
           -p:PublishSingleFile=true
-          -p:PublishTrimmed=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:PublishTrimmed=false
           -o publish
 
       - name: Upload build artifact
