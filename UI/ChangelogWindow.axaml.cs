@@ -56,7 +56,7 @@ public sealed class ChangelogEntryViewModel
 
 public partial class ChangelogWindow : Window, INotifyPropertyChanged
 {
-    private string _updateBannerText = "Загружаем историю релизов GitHub…";
+    private string _updateBannerText = "Загружаем историю версий из update.json…";
     private string _updateBannerForeground = "#8899AA";
     private bool _updateBannerVisible = true;
     private UpdateInfo? _knownUpdate;
@@ -65,7 +65,7 @@ public partial class ChangelogWindow : Window, INotifyPropertyChanged
     public bool UpdateBannerVisible { get => _updateBannerVisible; private set { _updateBannerVisible = value; OnPropertyChanged(); } }
     public string UpdateBannerText { get => _updateBannerText; private set { _updateBannerText = value; OnPropertyChanged(); } }
     public string UpdateBannerForeground { get => _updateBannerForeground; private set { _updateBannerForeground = value; OnPropertyChanged(); } }
-    public string FooterText => $"Текущая версия: {UpdateService.CurrentVersion}   ·   история: GitHub Releases   ·   app.log: {Path.GetFileName(AppLog.LogFilePath)}";
+    public string FooterText => $"Текущая версия: {UpdateService.CurrentVersion}   ·   история: update.json   ·   app.log: {Path.GetFileName(AppLog.LogFilePath)}";
 
     public ChangelogWindow(UpdateInfo? knownUpdate = null)
     {
@@ -97,7 +97,7 @@ public partial class ChangelogWindow : Window, INotifyPropertyChanged
                         Entries.Add(new ChangelogEntryViewModel(release));
                     UpdateBannerText = _knownUpdate?.IsNewer == true
                         ? $"Доступна новая версия {_knownUpdate.TagName}."
-                        : $"GitHub: загружено {Entries.Count} релизов.";
+                        : $"GitHub: загружено {Entries.Count} версий из update.json.";
                     UpdateBannerForeground = _knownUpdate?.IsNewer == true ? "#6DCC88" : "#7AA3CC";
                     UpdateBannerVisible = true;
                     return;
@@ -118,7 +118,7 @@ public partial class ChangelogWindow : Window, INotifyPropertyChanged
         Entries.Clear();
         foreach (var e in AppChangelog.Entries)
             Entries.Add(new ChangelogEntryViewModel(e));
-        UpdateBannerText = "GitHub сейчас недоступен. Показана встроенная история релизов.";
+        UpdateBannerText = "update.json сейчас недоступен. Показана встроенная история версий.";
         UpdateBannerForeground = "#8899AA";
         UpdateBannerVisible = true;
     }

@@ -1,0 +1,46 @@
+name: Rusted Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build win-x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore RustedShpizhionStudio.sln
+
+      - name: Publish
+        run: >
+          dotnet publish RustedShpizhionStudio.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishAot=true
+          -p:PublishSingleFile=true
+          -p:PublishTrimmed=true
+          -o publish
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusted-build-${{ github.run_number }}
+          path: publish/
+          if-no-files-found: error
+          retention-days: 14

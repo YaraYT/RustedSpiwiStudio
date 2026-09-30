@@ -97,7 +97,7 @@ public static class AppChangelog
         ]),
         new("0.1.0", "30 сентября 2026",
         [
-            "История «Что нового» теперь загружается из GitHub Releases.",
+            "История «Что нового» и данные обновления теперь загружаются из одного файла update.json в GitHub.",
             "Добавлена ручная проверка обновлений и безрамочное окно предложения новой версии.",
             "Добавлено обновление EXE с проверкой SHA-256 и сохранением пользовательских данных.",
             "Нижняя панель сканирования теперь появляется только во время работы.",
@@ -108,28 +108,53 @@ public static class AppChangelog
 
 // ─── GitHub Update Check ──────────────────────────────────────────────────────
 
-/// <summary>Ответ GitHub Releases API.</summary>
+public sealed class UpdateManifest
+{
+    [JsonPropertyName("channel")] public string Channel { get; set; } = "stable";
+    [JsonPropertyName("version")] public string Version { get; set; } = string.Empty;
+    [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+    [JsonPropertyName("date")] public string Date { get; set; } = string.Empty;
+    [JsonPropertyName("releaseUrl")] public string ReleaseUrl { get; set; } = string.Empty;
+    [JsonPropertyName("downloadUrl")] public string DownloadUrl { get; set; } = string.Empty;
+    [JsonPropertyName("assetName")] public string AssetName { get; set; } = string.Empty;
+    [JsonPropertyName("sha256")] public string Sha256 { get; set; } = string.Empty;
+    [JsonPropertyName("changes")] public List<string> Changes { get; set; } = [];
+    [JsonPropertyName("history")] public List<UpdateHistoryEntry> History { get; set; } = [];
+}
+
+public sealed class UpdateHistoryEntry
+{
+    [JsonPropertyName("version")] public string Version { get; set; } = string.Empty;
+    [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+    [JsonPropertyName("date")] public string Date { get; set; } = string.Empty;
+    [JsonPropertyName("releaseUrl")] public string ReleaseUrl { get; set; } = string.Empty;
+    [JsonPropertyName("downloadUrl")] public string DownloadUrl { get; set; } = string.Empty;
+    [JsonPropertyName("assetName")] public string AssetName { get; set; } = string.Empty;
+    [JsonPropertyName("sha256")] public string Sha256 { get; set; } = string.Empty;
+    [JsonPropertyName("changes")] public List<string> Changes { get; set; } = [];
+}
+
 public sealed class GitHubRelease
 {
-    [JsonPropertyName("tag_name")]     public string TagName { get; set; } = string.Empty;
-    [JsonPropertyName("name")]         public string Name { get; set; } = string.Empty;
-    [JsonPropertyName("body")]         public string Body { get; set; } = string.Empty;
-    [JsonPropertyName("html_url")]     public string HtmlUrl { get; set; } = string.Empty;
+    [JsonPropertyName("tag_name")] public string TagName { get; set; } = string.Empty;
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("body")] public string Body { get; set; } = string.Empty;
+    [JsonPropertyName("html_url")] public string HtmlUrl { get; set; } = string.Empty;
     [JsonPropertyName("published_at")] public string PublishedAt { get; set; } = string.Empty;
-    [JsonPropertyName("draft")]        public bool Draft { get; set; }
-    [JsonPropertyName("prerelease")]   public bool Prerelease { get; set; }
-    [JsonPropertyName("assets")]       public List<GitHubReleaseAsset> Assets { get; set; } = [];
+    [JsonPropertyName("draft")] public bool Draft { get; set; }
+    [JsonPropertyName("prerelease")] public bool Prerelease { get; set; }
+    [JsonPropertyName("assets")] public List<GitHubReleaseAsset> Assets { get; set; } = [];
 }
 
 public sealed class GitHubReleaseAsset
 {
-    [JsonPropertyName("id")]                   public long Id { get; set; }
-    [JsonPropertyName("name")]                 public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("id")] public long Id { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
     [JsonPropertyName("browser_download_url")] public string BrowserDownloadUrl { get; set; } = string.Empty;
-    [JsonPropertyName("content_type")]         public string ContentType { get; set; } = string.Empty;
-    [JsonPropertyName("size")]                 public long Size { get; set; }
-    [JsonPropertyName("digest")]               public string? Digest { get; set; }
-    [JsonPropertyName("state")]                public string State { get; set; } = string.Empty;
+    [JsonPropertyName("content_type")] public string ContentType { get; set; } = string.Empty;
+    [JsonPropertyName("size")] public long Size { get; set; }
+    [JsonPropertyName("digest")] public string? Digest { get; set; }
+    [JsonPropertyName("state")] public string State { get; set; } = string.Empty;
 }
 
 public sealed record UpdateInfo(

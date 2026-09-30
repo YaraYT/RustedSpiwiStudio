@@ -1,9 +1,5 @@
 namespace RustedShpizhionStudio.Services;
 
-/// <summary>
-/// GitHub-backed release discovery and single-file application updater.
-/// The public repository is intentionally read anonymously: no token is needed.
-/// </summary>
 public static class UpdateService
 {
     private const string Owner = "YaraYT";
@@ -12,43 +8,41 @@ public static class UpdateService
 
     public const string CurrentVersion = "0.1.1";
 
-    private static readonly string ReleasesApiUrl =
-        $"https://api.github.com/repos/{Owner}/{Repo}/releases?per_page=100";
+    private static readonly string ManifestUrl =
+        $"https://raw.githubusercontent.com/{Owner}/{Repo}/main/update.json";
 
     private static readonly HttpClient Http = CreateHttpClient();
 
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient();
-        client.Timeout = TimeSpan.FromSeconds(12);
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(12) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd($"RustedSpiwiStudio/{CurrentVersion}");
-        client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+        client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
         client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", ApiVersion);
         return client;
     }
 
-    public static async Task<IReadOnlyList<GitHubRelease>?> GetReleasesAsync(CancellationToken ct = default)
+    public static async Task<UpdateManifest?> GetManifestAsync(CancellationToken ct = default)
     {
         try
         {
-            var all = new List<GitHubRelease>();
-            for (var page = 1; page <= 20; page++)
+            using var response = await Http.GetAsync(ManifestUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!response.IsSuccessStatusCode)
             {
-                var url = $"https://api.github.com/repos/{Owner}/{Repo}/releases?per_page=100&page={page}";
-                using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
-                if (!response.IsSuccessStatusCode)
-                {
-                    AppLog.Warn($"UpdateService releases request returned {(int)response.StatusCode} {response.ReasonPhrase}.");
-                    return all.Count == 0 ? null : all.ToArray();
-                }
-
-                await using var stream = await response.Content.ReadAsStreamAsync(ct);
-                var releases = await JsonSerializer.DeserializeAsync(stream, AppJsonContext.Default.ListGitHubRelease, ct) ?? [];
-                var valid = releases.Where(x => !x.Draft && TryParseVersion(x.TagName, out _)).ToArray();
-                all.AddRange(valid);
-                if (releases.Count < 100) break;
+                AppLog.Warn($"UpdateService manifest request returned {(int)response.StatusCode} {response.ReasonPhrase}.");
+                return null;
             }
-            return all;
+
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            var manifest = await JsonSerializer.DeserializeAsync(stream, AppJsonContext.Default.UpdateManifest, ct);
+            if (manifest is null || string.IsNullOrWhiteSpace(manifest.Version))
+            {
+                AppLog.Warn("UpdateService received an empty or invalid update.json.");
+                return null;
+            }
+
+            AppLog.Info($"UpdateService: manifest={manifest.Version} current={CurrentVersion}");
+            return manifest;
         }
         catch (OperationCanceledException)
         {
@@ -56,48 +50,50 @@ public static class UpdateService
         }
         catch (Exception ex)
         {
-            AppLog.Warn($"UpdateService releases check failed: {ex.Message}");
+            AppLog.Warn($"UpdateService manifest check failed: {ex.Message}");
             return null;
         }
     }
 
-    public static async Task<UpdateInfo?> CheckAsync(CancellationToken ct = default)
+    public static async Task<IReadOnlyList<GitHubRelease>?> GetReleasesAsync(CancellationToken ct = default)
     {
-        var releases = await GetReleasesAsync(ct);
-        if (releases is null || releases.Count == 0)
-            return null;
+        var manifest = await GetManifestAsync(ct);
+        if (manifest is null) return null;
 
-        var current = ParseVersionOrNull(CurrentVersion);
-        if (current is null)
-            return null;
-
-        GitHubRelease? newest = null;
-        SemVersion newestVersion = default;
-        foreach (var release in releases)
+        var releases = new List<GitHubRelease>();
+        foreach (var entry in manifest.History)
         {
-            if (!TryParseVersion(release.TagName, out var version))
-                continue;
-
-            if (newest is null || version.CompareTo(newestVersion) > 0)
-            {
-                newest = release;
-                newestVersion = version;
-            }
+            if (string.IsNullOrWhiteSpace(entry.Version)) continue;
+            releases.Add(ToRelease(entry));
         }
 
-        if (newest is null)
-            return null;
+        if (releases.Count == 0)
+            releases.Add(ToRelease(manifest));
 
-        var isNewer = newestVersion.CompareTo(current.Value) > 0;
-        var asset = isNewer ? FindInstallerAsset(newest) : null;
-        AppLog.Info($"UpdateService: latest={newest.TagName} current={CurrentVersion} newer={isNewer} asset={(asset?.Name ?? "none")}");
-        return new UpdateInfo(newest, asset, isNewer);
+        return releases;
+    }
+
+    public static async Task<UpdateInfo?> CheckAsync(CancellationToken ct = default)
+    {
+        var manifest = await GetManifestAsync(ct);
+        if (manifest is null) return null;
+
+        var current = ParseVersionOrNull(CurrentVersion);
+        var remote = ParseVersionOrNull(manifest.Version);
+        if (current is null || remote is null) return null;
+
+        var isNewer = remote.Value.CompareTo(current.Value) > 0;
+        var release = ToRelease(manifest);
+        var asset = isNewer ? ToAsset(manifest) : null;
+
+        AppLog.Info($"UpdateService: latest={manifest.Version} current={CurrentVersion} newer={isNewer} asset={(asset?.Name ?? "none")}");
+        return new UpdateInfo(release, asset, isNewer);
     }
 
     public static async Task<bool> InstallUpdateAsync(UpdateInfo info, CancellationToken ct = default)
     {
         if (!info.CanInstall || info.Asset is null)
-            throw new InvalidOperationException("У релиза нет доступного EXE с SHA-256 для безопасной установки.");
+            throw new InvalidOperationException("В update.json нет доступного EXE с SHA-256 для безопасной установки.");
 
         var asset = info.Asset;
         var expectedDigest = ExtractSha256(asset.Digest!);
@@ -132,13 +128,9 @@ public static class UpdateService
                 if (!CryptographicOperations.FixedTimeEquals(
                         Encoding.ASCII.GetBytes(actualHex),
                         Encoding.ASCII.GetBytes(expectedDigest.ToLowerInvariant())))
-                {
                     throw new InvalidDataException($"Проверка SHA-256 не пройдена. Ожидалось {expectedDigest}, получено {actualHex}.");
-                }
             }
 
-            // Single-file release contains everything needed by the application.
-            // Only the EXE is replaced, so portable user data stays untouched.
             File.Copy(downloadPath, stagedPath, overwrite: false);
 
             var pid = Environment.ProcessId;
@@ -166,37 +158,55 @@ public static class UpdateService
         }
         finally
         {
-            // Once the updater has been launched, it owns the staged file.
-            // The temporary download can always be removed here.
             TryDelete(downloadPath);
         }
     }
 
-    private static GitHubReleaseAsset? FindInstallerAsset(GitHubRelease release)
-        => release.Assets
-            .Where(x => string.Equals(x.State, "uploaded", StringComparison.OrdinalIgnoreCase))
-            .Where(x => x.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-            .Where(x => !string.IsNullOrWhiteSpace(x.BrowserDownloadUrl))
-            .Where(x => !string.IsNullOrWhiteSpace(x.Digest))
-            .OrderByDescending(x => x.Name.Contains("Rusted", StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(x => x.Size)
-            .FirstOrDefault();
+    private static GitHubRelease ToRelease(UpdateManifest manifest)
+        => new()
+        {
+            TagName = "v" + manifest.Version.TrimStart('v'),
+            Name = string.IsNullOrWhiteSpace(manifest.Title) ? "Rusted Шпижион Студия " + manifest.Version : manifest.Title,
+            Body = string.Join(Environment.NewLine, manifest.Changes.Select(x => "- " + x)),
+            HtmlUrl = manifest.ReleaseUrl,
+            PublishedAt = manifest.Date
+        };
+
+    private static GitHubRelease ToRelease(UpdateHistoryEntry entry)
+        => new()
+        {
+            TagName = "v" + entry.Version.TrimStart('v'),
+            Name = string.IsNullOrWhiteSpace(entry.Title) ? "Rusted Шпижион Студия " + entry.Version : entry.Title,
+            Body = string.Join(Environment.NewLine, entry.Changes.Select(x => "- " + x)),
+            HtmlUrl = entry.ReleaseUrl,
+            PublishedAt = entry.Date
+        };
+
+    private static GitHubReleaseAsset ToAsset(UpdateManifest manifest)
+        => new()
+        {
+            Name = manifest.AssetName,
+            BrowserDownloadUrl = manifest.DownloadUrl,
+            Size = 0,
+            Digest = string.IsNullOrWhiteSpace(manifest.Sha256) ? null : "sha256:" + manifest.Sha256,
+            State = "uploaded",
+            ContentType = "application/vnd.microsoft.portable-executable"
+        };
 
     private static string ExtractSha256(string digest)
     {
         const string prefix = "sha256:";
         if (!digest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || digest.Length != prefix.Length + 64)
-            throw new InvalidDataException("GitHub asset не содержит корректный SHA-256 digest.");
+            throw new InvalidDataException("update.json не содержит корректный SHA-256 digest.");
         return digest[prefix.Length..];
     }
 
     private static string BuildUpdaterBatch(string appPath, string stagedPath, int pid)
     {
         static string Quote(string value) => value.Replace("%", "%%").Replace("\"", "\"\"");
-
         var app = Quote(appPath);
         var staged = Quote(stagedPath);
-        return $"@echo off\r\n" +
+        return "@echo off\r\n" +
                "setlocal EnableExtensions\r\n" +
                $"set \"APP={app}\"\r\n" +
                $"set \"NEW={staged}\"\r\n" +
@@ -256,10 +266,7 @@ public static class UpdateService
                     numeric = leftNumber.CompareTo(rightNumber);
                     if (numeric != 0) return numeric;
                 }
-                else if (leftNumeric != rightNumeric)
-                {
-                    return leftNumeric ? -1 : 1;
-                }
+                else if (leftNumeric != rightNumeric) return leftNumeric ? -1 : 1;
                 else
                 {
                     numeric = string.CompareOrdinal(left, right);
@@ -288,9 +295,7 @@ public static class UpdateService
         if (numbers.Length is < 1 or > 4) return false;
         var parsed = new int[4];
         for (var i = 0; i < numbers.Length; i++)
-        {
             if (!int.TryParse(numbers[i], NumberStyles.None, CultureInfo.InvariantCulture, out parsed[i])) return false;
-        }
         version = new SemVersion(parsed[0], numbers.Length > 1 ? parsed[1] : 0, numbers.Length > 2 ? parsed[2] : 0, numbers.Length > 3 ? parsed[3] : 0, prerelease);
         return true;
     }

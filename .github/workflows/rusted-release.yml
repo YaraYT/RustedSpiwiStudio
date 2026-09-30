@@ -1,0 +1,159 @@
+name: Rusted Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - RustedShpizhionStudio.csproj
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release on version change
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect version change
+        id: version
+        shell: pwsh
+        run: |
+          $currentText = Get-Content "RustedShpizhionStudio.csproj" -Raw
+          $currentMatch = [regex]::Match($currentText, '<Version>([^<]+)</Version>')
+          if (-not $currentMatch.Success) { throw "Не найден <Version>." }
+          $currentVersion = $currentMatch.Groups[1].Value.Trim()
+          $previousVersion = ""
+          if ("${{ github.event.before }}" -ne "0000000000000000000000000000000000000000") {
+            try {
+              $previousText = git show "${{ github.event.before }}:RustedShpizhionStudio.csproj"
+              $previousMatch = [regex]::Match($previousText, '<Version>([^<]+)</Version>')
+              if ($previousMatch.Success) { $previousVersion = $previousMatch.Groups[1].Value.Trim() }
+            } catch { }
+          }
+          "version=$currentVersion" >> $env:GITHUB_OUTPUT
+          "changed=$([string]::CompareOrdinal($currentVersion, $previousVersion) -ne 0)" >> $env:GITHUB_OUTPUT
+
+      - name: Setup .NET 10
+        if: steps.version.outputs.changed == 'True'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        if: steps.version.outputs.changed == 'True'
+        run: dotnet restore RustedShpizhionStudio.sln
+
+      - name: Publish
+        if: steps.version.outputs.changed == 'True'
+        run: >
+          dotnet publish RustedShpizhionStudio.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishAot=true
+          -p:PublishSingleFile=true
+          -p:PublishTrimmed=true
+          -o publish
+
+      - name: Package
+        if: steps.version.outputs.changed == 'True'
+        id: package
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $zipName = "RustedSpiwiStudio-$env:VERSION-win-x64.zip"
+          Compress-Archive -Path "publish\*" -DestinationPath $zipName -Force
+          $exePath = Join-Path $PWD "publish\RustedShpizhionStudio.exe"
+          $sha256 = (Get-FileHash -Path $exePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+          "sha256=$sha256" >> $env:GITHUB_OUTPUT
+
+      - name: Collect changes
+        if: steps.version.outputs.changed == 'True'
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $tag = "v$env:VERSION"
+          $previousTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v[0-9]+\.[0-9]+\.[0-9]+' -and $_ -ne $tag } | Select-Object -First 1
+          if ($previousTag) { $messages = @(git log "$previousTag..HEAD" --no-merges --pretty=format:"%s") }
+          else { $messages = @(git log HEAD --no-merges --pretty=format:"%s") }
+          $changes = @($messages | Where-Object { $_ -notmatch '\[skip-release-notes\]' } | Where-Object { $_ -notmatch '^chore\(release\): update update\.json' } | ForEach-Object { "- $_" })
+          if ($changes.Count -eq 0) { $changes = @("- Изменения версии опубликованы без отдельного списка.") }
+          $changes | Set-Content release-notes.md -Encoding utf8
+
+      - name: Create or update GitHub Release
+        if: steps.version.outputs.changed == 'True'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ZIP_NAME: ${{ steps.package.outputs.zip_name }}
+        run: |
+          $tag = "v$env:VERSION"
+          $title = "Rusted Шпижион Студия $env:VERSION"
+          if (gh release view $tag --repo $env:REPOSITORY *> $null) {
+            gh release edit $tag --repo $env:REPOSITORY --title $title --notes-file release-notes.md
+            gh release upload $tag "$env:ZIP_NAME" --repo $env:REPOSITORY --clobber
+            gh release upload $tag "publish\RustedShpizhionStudio.exe" --repo $env:REPOSITORY --clobber
+          } else {
+            gh release create $tag "$env:ZIP_NAME" "publish\RustedShpizhionStudio.exe" --repo $env:REPOSITORY --title $title --notes-file release-notes.md
+          }
+
+      - name: Update version manifest
+        if: steps.version.outputs.changed == 'True'
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ZIP_NAME: ${{ steps.package.outputs.zip_name }}
+          SHA256: ${{ steps.package.outputs.sha256 }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          $tag = "v$env:VERSION"
+          $releaseUrl = "https://github.com/$env:REPOSITORY/releases/tag/$tag"
+          $downloadUrl = "https://github.com/$env:REPOSITORY/releases/download/$tag/RustedShpizhionStudio.exe"
+          $date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          $changes = @(Get-Content release-notes.md | Where-Object { $_.Trim().Length -gt 0 } | ForEach-Object { $_.Trim() -replace '^[-*+]\s+', '' })
+          $entry = [ordered]@{
+            version = $env:VERSION
+            title = "Rusted Шпижион Студия $env:VERSION"
+            date = $date
+            releaseUrl = $releaseUrl
+            downloadUrl = $downloadUrl
+            assetName = "RustedShpizhionStudio.exe"
+            sha256 = $env:SHA256
+            changes = $changes
+          }
+          $history = @()
+          if (Test-Path update.json) {
+            try { $old = Get-Content update.json -Raw | ConvertFrom-Json; if ($old.history) { $history = @($old.history) } } catch { }
+          }
+          $newHistory = @($entry)
+          $newHistory += @($history | Where-Object { $_.version -ne $env:VERSION })
+          $newHistory = @($newHistory | Select-Object -First 50)
+          [ordered]@{
+            channel = "stable"
+            version = $env:VERSION
+            title = $entry.title
+            date = $date
+            releaseUrl = $releaseUrl
+            downloadUrl = $downloadUrl
+            assetName = $env:ZIP_NAME
+            sha256 = $env:SHA256
+            changes = $changes
+            history = $newHistory
+          } | ConvertTo-Json -Depth 10 | Set-Content update.json -Encoding utf8
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add update.json
+          git commit -m "chore(release): update update.json for $env:VERSION [skip-release-notes]"
+          git push origin HEAD:main
