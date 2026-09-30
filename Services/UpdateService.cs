@@ -6,7 +6,7 @@ public static class UpdateService
     private const string Repo = "RustedSpiwiStudio";
     private const string ApiVersion = "2026-03-10";
 
-    public const string CurrentVersion = "0.1.1";
+    public const string CurrentVersion = "0.1.2";
 
     private static readonly string ManifestUrl =
         $"https://raw.githubusercontent.com/{Owner}/{Repo}/main/update.json";

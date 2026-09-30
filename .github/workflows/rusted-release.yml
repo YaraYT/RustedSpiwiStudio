@@ -38,6 +38,7 @@ jobs:
             } catch { }
           }
           "version=$currentVersion" >> $env:GITHUB_OUTPUT
+          "previous=$previousVersion" >> $env:GITHUB_OUTPUT
           "changed=$([string]::CompareOrdinal($currentVersion, $previousVersion) -ne 0)" >> $env:GITHUB_OUTPUT
 
       - name: Setup .NET 10
@@ -81,10 +82,14 @@ jobs:
         shell: pwsh
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.version.outputs.previous }}
         run: |
           $tag = "v$env:VERSION"
           $previousTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v[0-9]+\.[0-9]+\.[0-9]+' -and $_ -ne $tag } | Select-Object -First 1
-          if ($previousTag) { $messages = @(git log "$previousTag..HEAD" --no-merges --pretty=format:"%s") }
+          if ($previousTag) { $baseline = $previousTag }
+          elseif ($env:PREVIOUS_VERSION) { $baseline = git log -S "<Version>$env:PREVIOUS_VERSION</Version>" --format=%H -1 -- RustedShpizhionStudio.csproj }
+          else { $baseline = "" }
+          if ($baseline) { $messages = @(git log "$baseline..HEAD" --no-merges --pretty=format:"%s") }
           else { $messages = @(git log HEAD --no-merges --pretty=format:"%s") }
           $changes = @($messages | Where-Object { $_ -notmatch '\[skip-release-notes\]' } | Where-Object { $_ -notmatch '^chore\(release\): update update\.json' } | ForEach-Object { "- $_" })
           if ($changes.Count -eq 0) { $changes = @("- Изменения версии опубликованы без отдельного списка.") }
@@ -135,7 +140,13 @@ jobs:
           }
           $history = @()
           if (Test-Path update.json) {
-            try { $old = Get-Content update.json -Raw | ConvertFrom-Json; if ($old.history) { $history = @($old.history) } } catch { }
+            try {
+              $old = Get-Content update.json -Raw | ConvertFrom-Json
+              if ($old.history) { $history = @($old.history) }
+              if ($history.Count -eq 0 -and $old.version -and $old.version -ne $env:VERSION) {
+                $history = @([ordered]@{ version = $old.version; title = $old.title; date = $old.date; releaseUrl = $old.releaseUrl; downloadUrl = $old.downloadUrl; assetName = $old.assetName; sha256 = $old.sha256; changes = @($old.changes) })
+              }
+            } catch { }
           }
           $newHistory = @($entry)
           $newHistory += @($history | Where-Object { $_.version -ne $env:VERSION })
@@ -147,7 +158,7 @@ jobs:
             date = $date
             releaseUrl = $releaseUrl
             downloadUrl = $downloadUrl
-            assetName = $env:ZIP_NAME
+            assetName = "RustedShpizhionStudio.exe"
             sha256 = $env:SHA256
             changes = $changes
             history = $newHistory

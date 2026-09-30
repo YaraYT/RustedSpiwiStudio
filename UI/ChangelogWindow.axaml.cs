@@ -46,11 +46,18 @@ public sealed class ChangelogEntryViewModel
         return result.Count == 0 ? ["Описание изменений в GitHub для этого релиза отсутствует."] : result;
     }
 
+    private static readonly string[] RussianMonths =
+    [
+        "января", "февраля", "марта", "апреля", "мая", "июня",
+        "июля", "августа", "сентября", "октября", "ноября", "декабря"
+    ];
+
     private static string FormatDate(string publishedAt)
     {
-        if (DateTimeOffset.TryParse(publishedAt, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date))
-            return date.ToLocalTime().ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("ru-RU"));
-        return publishedAt;
+        if (!DateTimeOffset.TryParse(publishedAt, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date))
+            return publishedAt;
+        date = date.ToLocalTime();
+        return date.Day + " " + RussianMonths[date.Month - 1] + " " + date.Year;
     }
 }
 

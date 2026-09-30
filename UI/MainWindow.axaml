@@ -7,7 +7,7 @@
         x:CompileBindings="True"
         Width="1500" Height="930" MinWidth="1100" MinHeight="700"
         WindowState="Maximized"
-        Title="Rusted Шпижион Студия 0.1.1">
+        Title="Rusted Шпижион Студия 0.1.2">
   <Window.Styles>
     <Style Selector="ProgressBar.animated-progress">
       <Setter Property="Foreground" Value="#4CD97B" />
@@ -24,7 +24,7 @@
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,145,112,120,88,82" ColumnSpacing="8" VerticalAlignment="Center">
         <StackPanel Spacing="1" VerticalAlignment="Center">
           <TextBlock Text="Rusted Шпижион Студия" FontSize="20" FontWeight="SemiBold" />
-          <Button Classes="version-link" Content="0.1.1" FontSize="11" Padding="0" Height="16" Click="Version_Click" ToolTip.Tip="Что нового" HorizontalAlignment="Left" />
+          <Button Classes="version-link" Content="0.1.2" FontSize="11" Padding="0" Height="16" Click="Version_Click" ToolTip.Tip="Что нового" HorizontalAlignment="Left" />
         </StackPanel>
         <TextBox Classes="search-box" Grid.Column="1" Margin="12,0,4,0" Height="40" VerticalContentAlignment="Center" PlaceholderText="Поиск файла, пути, мода или имени юнита…" Text="{Binding SearchQuery}" KeyDown="SearchBox_KeyDown" TextChanged="SearchBox_TextChanged" />
         <Button Grid.Column="2" Height="40" Classes="secondary" Content="Что нового" Click="Version_Click" />
@@ -56,7 +56,7 @@
             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
               <StackPanel Spacing="2">
                 <TextBlock Classes="kicker" Text="ЧТО НОВОГО" />
-                <TextBlock Classes="muted" Text="История релизов и изменения теперь загружаются напрямую из GitHub Releases." TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="История версий и изменения загружаются из update.json." TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1" Classes="secondary" FontSize="11" Padding="9,5" Content="✓ Что нового" Click="Version_Click" />
             </Grid>
@@ -117,7 +117,7 @@
       </ScrollViewer>
     </Border>
 
-    <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto" ColumnDefinitions="*,360" Margin="12">
+    <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto" ColumnDefinitions="*,Auto" Margin="12">
       <Border Grid.Column="0" Background="#15181E" CornerRadius="11" Padding="12" Margin="0,0,10,0">
         <Grid RowDefinitions="Auto,*,Auto">
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,10" ColumnSpacing="8">
@@ -193,7 +193,8 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" Background="#15181E" CornerRadius="11" Padding="12">
+      <Border Grid.Column="1" Width="360" Background="#15181E" CornerRadius="11" Padding="12"
+              IsVisible="{Binding DetailVisible}">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">

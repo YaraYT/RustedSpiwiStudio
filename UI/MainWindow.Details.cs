@@ -11,11 +11,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
     private async Task NavigateToDetailAsync(DetailRoute route)
     {
-        if (route == _currentRoute) return;
+        if (route == _currentRoute)
+        {
+            await CloseDetailAsync();
+            return;
+        }
         if (!await RenderDetailAsync(route)) return;
         PushLimited(_backHistory, _currentRoute);
         _forwardHistory.Clear();
         _currentRoute = route;
+        OnPropertyChanged(nameof(CanNavigateBack));
+        OnPropertyChanged(nameof(CanNavigateForward));
+    }
+
+    private async Task CloseDetailAsync()
+    {
+        if (_currentRoute == DetailRoute.Empty) return;
+        if (!await RenderDetailAsync(DetailRoute.Empty)) return;
+        _currentRoute = DetailRoute.Empty;
+        _backHistory.Clear();
+        _forwardHistory.Clear();
         OnPropertyChanged(nameof(CanNavigateBack));
         OnPropertyChanged(nameof(CanNavigateForward));
     }
