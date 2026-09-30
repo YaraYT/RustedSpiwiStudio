@@ -58,10 +58,9 @@ jobs:
           -c Release
           -r win-x64
           --self-contained true
-          -p:PublishAot=false
+          -p:PublishAot=true
           -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:PublishTrimmed=false
+          -p:PublishTrimmed=true
           -o publish
 
       - name: Package
@@ -76,7 +75,7 @@ jobs:
           $exePath = Join-Path $PWD "publish\RustedShpizhionStudio.exe"
           if (-not (Test-Path $exePath)) { throw "Не найден опубликованный EXE." }
           $nativeFiles = @("libSkiaSharp.dll", "libHarfBuzzSharp.dll", "av_libglesv2.dll") | Where-Object { Test-Path (Join-Path $PWD "publish\$_") }
-          if ($nativeFiles.Count -gt 0) { throw ("Native DLL остались рядом с EXE: " + ($nativeFiles -join ", ")) }
+          if ($nativeFiles.Count -lt 3) { throw ("Не найдены обязательные native DLL: " + ((@("libSkiaSharp.dll", "libHarfBuzzSharp.dll", "av_libglesv2.dll") | Where-Object { -not (Test-Path (Join-Path $PWD "publish\$_")) }) -join ", ")) }
           $sha256 = (Get-FileHash -Path $exePath -Algorithm SHA256).Hash.ToLowerInvariant()
           "zip_name=$zipName" >> $env:GITHUB_OUTPUT
           "sha256=$sha256" >> $env:GITHUB_OUTPUT

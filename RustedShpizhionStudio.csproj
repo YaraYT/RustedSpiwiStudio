@@ -10,14 +10,13 @@
     <RootNamespace>RustedShpizhionStudio</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>favicon.ico</ApplicationIcon>
-    <PublishAot>false</PublishAot>
-    <IsAotCompatible>false</IsAotCompatible>
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
     <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
     <InvariantGlobalization>true</InvariantGlobalization>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <PublishTrimmed>false</PublishTrimmed>
+    <PublishTrimmed>true</PublishTrimmed>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <EnableDefaultItems>true</EnableDefaultItems>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
