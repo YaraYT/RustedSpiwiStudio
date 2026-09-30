@@ -9,6 +9,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (_loaded) return;
         _loaded = true;
+        CrashManager.SetStage("MainWindow initialization");
         StartBusyIndicator("Загрузка индекса", false);
         StatusText = "Загрузка…";
         OnPropertyChanged(nameof(StatusText));
@@ -18,6 +19,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         AppLog.Info($"=== Запуск Rusted Шпижион Студия {UpdateService.CurrentVersion} " +
                     $"на {Environment.OSVersion} ({RuntimeInformation.ProcessArchitecture}) ===");
 
+        CrashManager.SetStage("loading configuration");
         var loaded = await _configService.LoadAsync();
         Config = loaded.Config;
         _configPath = loaded.ActivePath;
@@ -28,12 +30,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ApplyWindowMode(Config.WindowMode);
         // Конструирование схемы и проверка совместимости индекса могут быть тяжёлыми.
         // Не делаем это на UI-потоке.
+        CrashManager.SetStage("initializing SQLite index");
         (_db, _indexer) = await Task.Run(() =>
         {
             var db = new IndexDatabase(_configService.IndexPath);
             return (db, new IndexerService(db, _configService.DocsDbPath));
         });
 
+        CrashManager.SetStage("loading indexed data");
         if (!string.IsNullOrWhiteSpace(Config.ModsRoot) && Directory.Exists(Config.ModsRoot))
         {
             await RefreshModsAsync();
@@ -45,12 +49,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             IndexStateText = "Источник не настроен";
             OnPropertyChanged(nameof(IndexStateText));
             StopBusyIndicator();
+            CrashManager.MarkHealthy();
             await ShowSettingsAsync();
             await CheckUpdatesOnStartupAsync();
             return;
         }
 
         StopBusyIndicator();
+        CrashManager.MarkHealthy();
         StatusText = HasIndexedData ? "Готово" : "Индекс отсутствует";
         OnPropertyChanged(nameof(StatusText));
         await CheckUpdatesOnStartupAsync();

@@ -10,7 +10,7 @@ public static class UpdateService
     private const string Repo = "RustedSpiwiStudio";
     private const string ApiVersion = "2026-03-10";
 
-    public const string CurrentVersion = "0.1.0";
+    public const string CurrentVersion = "0.1.1";
 
     private static readonly string ReleasesApiUrl =
         $"https://api.github.com/repos/{Owner}/{Repo}/releases?per_page=100";

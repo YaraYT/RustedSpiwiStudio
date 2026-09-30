@@ -40,6 +40,20 @@ jobs:
             -o publish `
             -bl:publish.binlog
 
+      - name: Package successful test build
+        if: success()
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "publish\\*" -DestinationPath "RustedSpiwiStudio-0.1.1-test.zip" -Force
+
+      - name: Upload successful test artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusted-test-0.1.1
+          path: RustedSpiwiStudio-0.1.1-test.zip
+          if-no-files-found: error
+
       - name: Diagnostic result
         if: always()
         shell: pwsh
