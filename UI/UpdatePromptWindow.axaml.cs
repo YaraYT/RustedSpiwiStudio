@@ -11,8 +11,8 @@ public partial class UpdatePromptWindow : Window, INotifyPropertyChanged
     public string VersionText => _info.TagName;
     public string ReleaseTitle => _info.Title;
     public string AssetText => _info.Asset is null
-        ? "Исполняемый файл обновления не найден."
-        : $"Файл: {_info.Asset.Name} · {FormatSize(_info.Asset.Size)} · SHA-256 проверяется перед заменой";
+        ? "ZIP-пакет обновления не найден."
+        : $"Пакет: {_info.Asset.Name} · {FormatSize(_info.Asset.Size)} · SHA-256 проверяется перед заменой набора файлов";
     public string ReleaseNotes => string.IsNullOrWhiteSpace(_info.Body)
         ? "В этом релизе нет отдельного описания изменений."
         : NormalizeReleaseNotes(_info.Body);

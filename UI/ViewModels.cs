@@ -138,10 +138,7 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
                     try
                     {
                         await using var fs = new FileStream(FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 64 * 1024, useAsync: true);
-                        using var ms = new MemoryStream();
-                        await fs.CopyToAsync(ms, ct);
-                        ms.Position = 0;
-                        var bitmap = Bitmap.DecodeToWidth(ms, width, BitmapInterpolationMode.LowQuality);
+                        var bitmap = Bitmap.DecodeToWidth(fs, width, BitmapInterpolationMode.LowQuality);
                         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                         {
                             if (_disposed || ct.IsCancellationRequested) { bitmap.Dispose(); return; }
@@ -188,8 +185,8 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
     {
         if (_disposed) return;
         _disposed = true;
-        _thumbnail = Interlocked.Exchange(ref _thumbnail, null);
-        try { _thumbnail?.Dispose(); } catch { }
+        var thumbnail = Interlocked.Exchange(ref _thumbnail, null);
+        try { thumbnail?.Dispose(); } catch { }
         _thumbnailTask = null;
     }
 
@@ -201,11 +198,8 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
         try
         {
             await using var fs=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete,64 * 1024,useAsync:true);
-            using var ms=new MemoryStream();
-            await fs.CopyToAsync(ms,ct);
-            ms.Position=0;
             ct.ThrowIfCancellationRequested();
-            return Bitmap.DecodeToWidth(ms,Math.Clamp(width,320,1800),BitmapInterpolationMode.HighQuality);
+            return Bitmap.DecodeToWidth(fs,Math.Clamp(width,320,1800),BitmapInterpolationMode.HighQuality);
         }
         catch(OperationCanceledException) { return null; }
         catch(Exception ex){ AppLog.Warn($"Preview decode failed for '{path}': {ex.Message}"); return null; }

@@ -1,6 +1,6 @@
 namespace RustedShpizhionStudio.Core;
 
-internal static class CrashManager
+internal static partial class CrashManager
 {
     private const string RestartArgumentPrefix = "--crash-restart-count=";
     private const int MaxRestartAttempts = 2;
@@ -12,8 +12,8 @@ internal static class CrashManager
     private static int _restartCount;
     private static string _stage = "bootstrap";
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
+    [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
 
     public static void Initialize(string[] args)
     {

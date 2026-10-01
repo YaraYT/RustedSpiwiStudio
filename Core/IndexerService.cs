@@ -1,6 +1,6 @@
 namespace RustedShpizhionStudio.Core;
 
-public sealed class IndexerService
+public sealed partial class IndexerService
 {
     private const long MaxArchiveBytes = 2L * 1024 * 1024 * 1024;
     private static readonly HashSet<string> FallbackImageKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -8,6 +8,12 @@ public sealed class IndexerService
 
     private readonly IndexDatabase _db;
     private readonly string _docsDbPath;
+    private HashSet<string>? _docsImageKeys;
+    private static readonly HashSet<string> AnimationMarkerKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "total_frames", "frame_width", "frame_height", "frameindex",
+        "animateframestart", "animateframeend", "animateframespeed", "animateframelooping"
+    };
 
     public IndexerService(IndexDatabase db, string docsDbPath)
     { _db = db; _docsDbPath = docsDbPath; }
@@ -88,8 +94,18 @@ public sealed class IndexerService
             var save = await (options.AskCancelAsync?.Invoke(summary) ?? Task.FromResult(false));
             if (save)
             {
-                try { tx.Commit(); }
-                catch (Exception commitEx) { AppLog.Error("Ошибка commit при сохранении частичного результата", commitEx); }
+                try
+                {
+                    tx.Commit();
+                }
+                catch (Exception commitEx)
+                {
+                    AppLog.Error("Ошибка commit при сохранении частичного результата", commitEx);
+                    try { tx.Rollback(); } catch (Exception rbEx) { AppLog.Warn($"Rollback после неудачного commit: {rbEx.Message}"); }
+                    UpdateLastRunCancelled(summary, false);
+                    options.Progress?.Invoke(new("cancelled", "Сканирование остановлено, но частичный результат не удалось сохранить.", 0, 0, summary with { Cancelled = true, Saved = false }));
+                    return summary with { Cancelled = true, Saved = false };
+                }
                 UpdateLastRunCancelled(summary, true);
                 options.Progress?.Invoke(new("cancelled", "Сканирование остановлено, частичный результат сохранён.", 0, 0, summary with { Cancelled = true, Saved = true }));
                 return summary with { Cancelled = true, Saved = true };
@@ -105,8 +121,18 @@ public sealed class IndexerService
             var save = await (options.AskCancelAsync?.Invoke(ex.Summary) ?? Task.FromResult(false));
             if (save)
             {
-                try { tx.Commit(); }
-                catch (Exception commitEx) { AppLog.Error("Ошибка commit (ScanCancelled)", commitEx); }
+                try
+                {
+                    tx.Commit();
+                }
+                catch (Exception commitEx)
+                {
+                    AppLog.Error("Ошибка commit (ScanCancelled)", commitEx);
+                    try { tx.Rollback(); } catch (Exception rbEx) { AppLog.Warn($"Rollback после неудачного commit (ScanCancelled): {rbEx.Message}"); }
+                    UpdateLastRunCancelled(ex.Summary, false);
+                    options.Progress?.Invoke(new("cancelled", "Сканирование остановлено, но частичный результат не удалось сохранить.", 0, 0, ex.Summary with { Cancelled = true, Saved = false }));
+                    return ex.Summary with { Cancelled = true, Saved = false };
+                }
                 UpdateLastRunCancelled(ex.Summary, true);
                 options.Progress?.Invoke(new("cancelled", "Сканирование остановлено, частичный результат сохранён.", 0, 0, ex.Summary with { Cancelled = true, Saved = true }));
                 return ex.Summary with { Cancelled = true, Saved = true };
@@ -133,9 +159,15 @@ public sealed class IndexerService
         var modId = UpsertMod(c, tx, mod);
         Execute(c, tx, "DELETE FROM inheritance_edges WHERE mod_id=$id; DELETE FROM image_references WHERE mod_id=$id; DELETE FROM units WHERE mod_id=$id;", ("$id", modId));
 
-        var allFiles = Directory.EnumerateFiles(mod.RootPath, "*", SearchOption.AllDirectories).ToList();
-        var iniPaths = allFiles.Where(IsIniLike).ToList();
-        var imagePaths = allFiles.Where(IsImage).ToList();
+        var allFiles = new List<string>();
+        var iniPaths = new List<string>();
+        var imagePaths = new List<string>();
+        foreach (var path in Directory.EnumerateFiles(mod.RootPath, "*", SearchOption.AllDirectories))
+        {
+            allFiles.Add(path);
+            if (IsIniLike(path)) iniPaths.Add(path);
+            if (IsImage(path)) imagePaths.Add(path);
+        }
         var files = new List<FileState>(iniPaths.Count);
         var currentFileRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -288,7 +320,7 @@ public sealed class IndexerService
         DeleteStaleImages(c, tx, modId, imageRels);
         SyncMaps(c, tx, modId, mod.RootPath, imagePaths, options.CancellationToken);
 
-        var imageKeys = LoadDocsImageKeys();
+        var imageKeys = _docsImageKeys ??= LoadDocsImageKeys();
         var sectionsByFile = BuildSectionMaps(files, c, tx, modId);
         var ownSectionsByFile = sectionsByFile.ToDictionary(k => k.Key, v => v.Value, comparer: EqualityComparer<long>.Default);
         BuildExpandedSectionMaps(mod, files, sectionsByFile, ownSectionsByFile, options.CancellationToken);
@@ -313,6 +345,7 @@ public sealed class IndexerService
             {
                 ThrowIfCancelled(options.CancellationToken, files.Count, imagePaths.Count, refs, missing, modIndex);
                 var resolved = ResolveSection(state.Row.Id, section.Name, files, sectionsByFile, templateFile?.Row.Id, templateSections, memo, visiting, c, tx, modId);
+                var resolvedKeys = new HashSet<string>(resolved.Values.Keys, StringComparer.OrdinalIgnoreCase);
                 if (resolved.Cycle)
                 {
                     options.Progress?.Invoke(new("warning", $"Обнаружен цикл наследования: {state.Row.RelativePath} → [{section.Name}]"));
@@ -346,7 +379,7 @@ public sealed class IndexerService
                     if (!refSeen.Add(sig)) continue;
                     var status = imageId.HasValue ? "ok" : resolution.Type == "outside-root" ? "outside-root" : "missing";
                     if (status != "ok") missing++;
-                    var animation = DetectAnimationReference(section.Name, resolved.Values.Keys.ToList(), keyName);
+                    var animation = DetectAnimationReference(section.Name, resolvedKeys, keyName);
                     InsertReference(c, tx, imageId, modId, state.Row.Id, section.Id, unitId, keyName, expanded, rel, relation, source, inheritedFrom, status, animation);
                     refs++;
                 }
@@ -553,6 +586,14 @@ public sealed class IndexerService
         Execute(c,tx,"DELETE FROM sections WHERE file_id=$f",("$f",file.Id));
         var result=new List<SectionRow>();
         var ids=new Dictionary<string,long>(StringComparer.OrdinalIgnoreCase);
+        using var keyCmd=c.CreateCommand();
+        keyCmd.Transaction=tx;
+        keyCmd.CommandText="INSERT INTO keys(section_id,key_name,value,line_no,is_directive) VALUES($s,$k,$v,$l,$d)";
+        keyCmd.Parameters.Add("$s",SqliteType.Integer);
+        keyCmd.Parameters.Add("$k",SqliteType.Text);
+        keyCmd.Parameters.Add("$v",SqliteType.Text);
+        keyCmd.Parameters.Add("$l",SqliteType.Integer);
+        keyCmd.Parameters.Add("$d",SqliteType.Integer);
         foreach(var s in parsed.Sections)
         {
             long id;
@@ -569,7 +610,15 @@ public sealed class IndexerService
                 ids[s.Name]=id;
             }
             s.Id=id;
-            foreach(var k in s.Keys) Execute(c,tx,"INSERT INTO keys(section_id,key_name,value,line_no,is_directive) VALUES($s,$k,$v,$l,$d)",("$s",id),("$k",k.Key),("$v",k.Value),("$l",k.LineNo),("$d",k.Directive?1:0));
+            foreach(var k in s.Keys)
+            {
+                keyCmd.Parameters["$s"].Value=id;
+                keyCmd.Parameters["$k"].Value=k.Key;
+                keyCmd.Parameters["$v"].Value=k.Value;
+                keyCmd.Parameters["$l"].Value=k.LineNo;
+                keyCmd.Parameters["$d"].Value=k.Directive?1:0;
+                keyCmd.ExecuteNonQuery();
+            }
             result.Add(new(id,file.Id,s.Name,s.LineStart,s));
         }
         return result;
@@ -654,7 +703,7 @@ public sealed class IndexerService
         };
         foreach (var candidate in candidates)
             if (File.Exists(candidate)) return candidate;
-        return Directory.EnumerateFiles(directory, "*.tmx", SearchOption.TopDirectoryOnly).FirstOrDefault();
+        return null;
     }
 
     private static Dictionary<long,Dictionary<string,IniSection>> BuildSectionMaps(List<FileState> files,SqliteConnection c,SqliteTransaction tx,long modId)
@@ -765,13 +814,14 @@ public sealed class IndexerService
     private static string ExpandVariables(string value,string section,Dictionary<string,ResolvedSection> localContext,int depth=0)
     {
         if(depth>12)return value;
-        return RegexVariable.Replace(value,m=>{var e=m.Groups[1].Value.Trim();if(e.Contains('(')&&e.EndsWith(')')){var i=e.IndexOf('(');var inner=e[(i+1)..^1].Trim();return ExpandVariables(ResolveVariable(inner,section,localContext),section,localContext,depth+1);}return ExpandVariables(ResolveVariable(e,section,localContext),section,localContext,depth+1);});
+        return RegexVariable().Replace(value,m=>{var e=m.Groups[1].Value.Trim();if(e.Contains('(')&&e.EndsWith(')')){var i=e.IndexOf('(');var inner=e[(i+1)..^1].Trim();return ExpandVariables(ResolveVariable(inner,section,localContext),section,localContext,depth+1);}return ExpandVariables(ResolveVariable(e,section,localContext),section,localContext,depth+1);});
     }
     private static string ResolveVariable(string expr,string section,Dictionary<string,ResolvedSection> localContext){if(!expr.Contains('.'))return localContext.GetValueOrDefault(section)?.Defines.GetValueOrDefault(expr)??"";var p=expr.Split('.',2);return localContext.GetValueOrDefault(p[0])?.Values.GetValueOrDefault(p[1])?.Value??"";}
-    private static readonly Regex RegexVariable=new(@"\$\{([^}]+)\}",RegexOptions.Compiled|RegexOptions.CultureInvariant);
+    [GeneratedRegex(@"\$\{([^}]+)\}", RegexOptions.CultureInvariant)]
+    private static partial Regex RegexVariable();
 
     private static bool ShouldIndexImage(string key,string value,HashSet<string> imageKeys)=>imageKeys.Contains(IniParser.NormalizeImageKeyName(key))||IniParser.IsImagePathLike(value);
-    private static bool DetectAnimationReference(string section,List<string> keys,string key){var s=section.ToLowerInvariant();if(s.StartsWith("animation")||s.Contains("_animation")||s.Contains("animation_"))return true;var k=key.ToLowerInvariant();if(k.StartsWith("animation_")||k.StartsWith("animateframe"))return true;var set=keys.Select(x=>x.ToLowerInvariant()).ToHashSet();return new[]{"total_frames","frame_width","frame_height","frameindex","animateframestart","animateframeend","animateframespeed","animateframelooping"}.Any(set.Contains);}
+    private static bool DetectAnimationReference(string section,ISet<string> keys,string key){var s=section.ToLowerInvariant();if(s.StartsWith("animation")||s.Contains("_animation")||s.Contains("animation_"))return true;var k=key.ToLowerInvariant();if(k.StartsWith("animation_")||k.StartsWith("animateframe"))return true;return AnimationMarkerKeys.Overlaps(keys);}
 
     private static void InsertReference(SqliteConnection c,SqliteTransaction tx,long? imageId,long modId,long fileId,long sectionId,long? unitId,string key,string raw,string? rel,string relation,SourceRef source,string? inherited,string status,bool animation)=>Execute(c,tx,"INSERT OR IGNORE INTO image_references(image_id,mod_id,file_id,section_id,unit_id,key_name,raw_value,resolved_path,relation_type,source_file_id,source_section_id,inherited_from,status,is_animation) VALUES($i,$m,$f,$s,$u,$k,$r,$p,$rel,$sf,$ss,$inh,$st,$a)",("$i",(object?)imageId??DBNull.Value),("$m",modId),("$f",fileId),("$s",sectionId),("$u",(object?)unitId??DBNull.Value),("$k",key),("$r",raw),("$p",(object?)rel??DBNull.Value),("$rel",relation),("$sf",source.FileId),("$ss",source.SectionId),("$inh",(object?)inherited??DBNull.Value),("$st",status),("$a",animation?1:0));
     private static void ClassifyImages(SqliteConnection c, SqliteTransaction tx, long modId)
@@ -885,8 +935,46 @@ WHERE mod_id = $m;", ("$m", modId));
 
     public static async Task<string> ExtractRwmodAsync(string archivePath,string hash,string cacheRoot,CancellationToken ct)
     {
-        var info=new FileInfo(archivePath);if(info.Length>MaxArchiveBytes)throw new InvalidOperationException(".rwmod превышает лимит 2 GiB.");var outRoot=Path.Combine(cacheRoot,hash);var marker=Path.Combine(outRoot,".extracted");if(File.Exists(marker))return outRoot;Directory.CreateDirectory(outRoot);var temp=outRoot+".tmp";if(Directory.Exists(temp))Directory.Delete(temp,true);Directory.CreateDirectory(temp);
-        using var archive=new ZipArchive(File.OpenRead(archivePath),ZipArchiveMode.Read,false,Encoding.UTF8);long total=0;foreach(var e in archive.Entries){ct.ThrowIfCancellationRequested();if(e.FullName.EndsWith('/'))continue;var normalized=e.FullName.Replace('\\','/');var dest=Path.GetFullPath(Path.Combine(temp,normalized.Replace('/',Path.DirectorySeparatorChar)));var baseRoot=Path.GetFullPath(temp).TrimEnd(Path.DirectorySeparatorChar)+Path.DirectorySeparatorChar;if(!dest.StartsWith(baseRoot,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Небезопасный путь внутри .rwmod.");Directory.CreateDirectory(Path.GetDirectoryName(dest)!);await using var source=e.Open();await using var target=File.Create(dest);await source.CopyToAsync(target,ct);total+=e.Length;if(total>MaxArchiveBytes)throw new InvalidOperationException("Распакованный .rwmod превышает лимит 2 GiB.");}File.WriteAllText(Path.Combine(temp,".extracted"),hash);if(Directory.Exists(outRoot))Directory.Delete(outRoot,true);Directory.Move(temp,outRoot);return outRoot;
+        var info=new FileInfo(archivePath);
+        if(info.Length>MaxArchiveBytes)throw new InvalidOperationException(".rwmod превышает лимит 2 GiB.");
+        var outRoot=Path.Combine(cacheRoot,hash);
+        var marker=Path.Combine(outRoot,".extracted");
+        if(File.Exists(marker))return outRoot;
+        Directory.CreateDirectory(cacheRoot);
+        var temp=outRoot+".tmp";
+        try
+        {
+            if(Directory.Exists(temp))Directory.Delete(temp,true);
+            Directory.CreateDirectory(temp);
+            using var archive=new ZipArchive(File.OpenRead(archivePath),ZipArchiveMode.Read,false,Encoding.UTF8);
+            long total=0;
+            foreach(var e in archive.Entries)
+            {
+                ct.ThrowIfCancellationRequested();
+                if(e.FullName.EndsWith('/'))continue;
+                var normalized=e.FullName.Replace('\\','/');
+                var dest=Path.GetFullPath(Path.Combine(temp,normalized.Replace('/',Path.DirectorySeparatorChar)));
+                var baseRoot=Path.GetFullPath(temp).TrimEnd(Path.DirectorySeparatorChar)+Path.DirectorySeparatorChar;
+                if(!dest.StartsWith(baseRoot,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Небезопасный путь внутри .rwmod.");
+                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                await using var source=e.Open();
+                await using var target=File.Create(dest);
+                await source.CopyToAsync(target,ct);
+                total+=e.Length;
+                if(total>MaxArchiveBytes)throw new InvalidOperationException("Распакованный .rwmod превышает лимит 2 GiB.");
+            }
+            File.WriteAllText(Path.Combine(temp,".extracted"),hash);
+            if(Directory.Exists(outRoot))Directory.Delete(outRoot,true);
+            Directory.Move(temp,outRoot);
+            return outRoot;
+        }
+        finally
+        {
+            if(Directory.Exists(temp))
+            {
+                try { Directory.Delete(temp,true); } catch(Exception ex) { AppLog.Warn($"Не удалось очистить временную папку .rwmod: {ex.Message}"); }
+            }
+        }
     }
 
     private static bool IsIniLike(string p)=>Path.GetExtension(p).Equals(".ini",StringComparison.OrdinalIgnoreCase)||Path.GetExtension(p).Equals(".template",StringComparison.OrdinalIgnoreCase);

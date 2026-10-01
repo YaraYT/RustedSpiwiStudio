@@ -1,18 +1,47 @@
 {
   "channel": "stable",
-  "version": "0.1.1",
-  "title": "Rusted Шпижион Студия 0.1.1",
-  "date": "2026-09-30T00:00:00Z",
-  "releaseUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/tag/v0.1.1",
-  "downloadUrl": "",
-  "assetName": "",
+  "version": "0.1.4",
+  "title": "Rusted Шпижион Студия 0.1.4",
+  "date": "2026-10-01T00:00:00Z",
+  "releaseUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/tag/v0.1.4",
+  "downloadUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/download/v0.1.4/RustedSpiwiStudio-0.1.4-win-x64.zip",
+  "assetName": "RustedSpiwiStudio-0.1.4-win-x64.zip",
   "sha256": "",
   "changes": [
-    "Добавлена расширенная диагностика запуска и критических ошибок.",
-    "Критическая ошибка теперь показывается системным окном Windows с ID и текстом исключения.",
-    "Добавлен аварийный перезапуск с защитой от бесконечного цикла после двух неудачных запусков.",
-    "Лог автоматически использует %TEMP%, если рядом с программой нет доступа на запись.",
-    "Добавлена предварительная проверка обязательных Windows native-библиотек."
+    "Укреплена стабильность запуска Native AOT-сборки и работы с native-зависимостями.",
+    "Автообновление переведено на ZIP-пакет с полной опубликованной сборкой и проверкой SHA-256.",
+    "Исправлены ошибки частичного сохранения результата при неудачном commit и освобождения миниатюр.",
+    "Исправлены несколько простых узких мест индексатора и обработки .rwmod."
   ],
-  "history": []
+  "history": [
+    {
+      "version": "0.1.4",
+      "title": "Rusted Шпижион Студия 0.1.4",
+      "date": "2026-10-01T00:00:00Z",
+      "releaseUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/tag/v0.1.4",
+      "downloadUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/download/v0.1.4/RustedSpiwiStudio-0.1.4-win-x64.zip",
+      "assetName": "RustedSpiwiStudio-0.1.4-win-x64.zip",
+      "sha256": "",
+      "changes": [
+        "Укреплена стабильность запуска Native AOT-сборки и работы с native-зависимостями.",
+        "Автообновление переведено на ZIP-пакет с полной опубликованной сборкой и проверкой SHA-256.",
+        "Исправлены ошибки частичного сохранения результата при неудачном commit и освобождения миниатюр.",
+        "Исправлены несколько простых узких мест индексатора и обработки .rwmod."
+      ]
+    },
+    {
+      "version": "0.1.3",
+      "title": "Rusted Шпижион Студия 0.1.3",
+      "date": "2026-10-01T00:00:00Z",
+      "releaseUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/tag/v0.1.3",
+      "downloadUrl": "",
+      "assetName": "",
+      "sha256": "",
+      "changes": [
+        "Возвращён Native AOT и trimming.",
+        "Убрано встраивание native DLL в single-file публикацию.",
+        "Релизная сборка использует внешние native DLL рядом с EXE."
+      ]
+    }
+  ]
 }

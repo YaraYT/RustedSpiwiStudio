@@ -2,6 +2,9 @@ namespace RustedShpizhionStudio.UI;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
+    public string VersionText => UpdateService.CurrentVersion;
+    public string WindowTitle => $"Rusted Шпижион Студия {VersionText}";
+
     public MainWindow()
     {
         InitializeComponent();

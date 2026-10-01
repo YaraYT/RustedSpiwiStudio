@@ -1,4 +1,4 @@
-# Port status: Rusted Шпижион Студия 0.1.0
+# Port status: Rusted Шпижион Студия 0.1.4
 
 ## Revision 3
 
@@ -14,6 +14,15 @@ Fixed compiler issues found while building the previous C# port:
 The remaining IDE0017/IDE0305/IDE0290/IDE0060/CA1822/SYSLIB1045/CA1861/CA1068 messages are analyzer suggestions rather than compiler errors.
 
 A real `dotnet build/publish` could not be executed in the working environment because the .NET SDK is not installed there.
+
+## 0.1.4-alpha
+
+- Native AOT remains enabled; `PublishSingleFile=false` is used so Avalonia native DLLs remain beside the EXE.
+- Release packaging now produces a minimal ZIP bundle instead of publishing a standalone EXE asset.
+- Automatic updates verify the ZIP SHA-256 before extraction and retry download verification up to three times with a 5-second delay.
+- Bundle replacement is staged externally, preserves portable user data, and rolls back failed file replacement attempts.
+- Replaced `DllImport` with source-generated `LibraryImport` and `RegexOptions.Compiled` with `GeneratedRegex` for AOT-friendly interop.
+- Fixed partial-scan `Saved=true` reporting after failed SQLite commit and fixed thumbnail disposal.
 - SQLite: shared-cache disabled to allow UI reads during long indexing transactions.
 
 

@@ -87,6 +87,20 @@ public static class AppChangelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries =
     [
+        new("0.1.4", "1 октября 2026",
+        [
+            "Укреплена стабильность запуска Native AOT-сборки и работы с native-зависимостями.",
+            "Автообновление переведено на ZIP-пакет с полной опубликованной сборкой и проверкой SHA-256.",
+            "Исправлены ошибки частичного сохранения результата при неудачном commit и освобождения миниатюр.",
+            "Исправлены несколько простых узких мест индексатора и обработки .rwmod."
+        ]),
+        new("0.1.3", "1 октября 2026",
+        [
+            "Возвращён Native AOT для релизной сборки.",
+            "Возвращён trimming, необходимый Native AOT.",
+            "Убрано встраивание native DLL в single-file публикацию.",
+            "Релизная сборка использует внешние native DLL рядом с EXE."
+        ]),
         new("0.1.2", "1 октября 2026",
         [
             "Исправлено падение окна «Что нового» в режиме invariant globalization.",
@@ -175,6 +189,7 @@ public sealed record UpdateInfo(
     public string Body => Release.Body;
     public bool CanInstall => IsNewer
                               && Asset is not null
+                              && Asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
                               && !string.IsNullOrWhiteSpace(Asset.BrowserDownloadUrl)
                               && IsSha256Digest(Asset.Digest);
 

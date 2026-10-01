@@ -33,7 +33,7 @@ jobs:
           -r win-x64
           --self-contained true
           -p:PublishAot=true
-          -p:PublishSingleFile=true
+          -p:PublishSingleFile=false
           -p:PublishTrimmed=true
           -o publish
 

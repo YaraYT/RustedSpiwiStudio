@@ -6,7 +6,7 @@ public static class UpdateService
     private const string Repo = "RustedSpiwiStudio";
     private const string ApiVersion = "2026-03-10";
 
-    public const string CurrentVersion = "0.1.2";
+    public const string CurrentVersion = "0.1.4";
 
     private static readonly string ManifestUrl =
         $"https://raw.githubusercontent.com/{Owner}/{Repo}/main/update.json";
@@ -58,12 +58,14 @@ public static class UpdateService
     public static async Task<IReadOnlyList<GitHubRelease>?> GetReleasesAsync(CancellationToken ct = default)
     {
         var manifest = await GetManifestAsync(ct);
-        if (manifest is null) return null;
+        if (manifest is null)
+            return null;
 
         var releases = new List<GitHubRelease>();
         foreach (var entry in manifest.History)
         {
-            if (string.IsNullOrWhiteSpace(entry.Version)) continue;
+            if (string.IsNullOrWhiteSpace(entry.Version))
+                continue;
             releases.Add(ToRelease(entry));
         }
 
@@ -76,11 +78,13 @@ public static class UpdateService
     public static async Task<UpdateInfo?> CheckAsync(CancellationToken ct = default)
     {
         var manifest = await GetManifestAsync(ct);
-        if (manifest is null) return null;
+        if (manifest is null)
+            return null;
 
         var current = ParseVersionOrNull(CurrentVersion);
         var remote = ParseVersionOrNull(manifest.Version);
-        if (current is null || remote is null) return null;
+        if (current is null || remote is null)
+            return null;
 
         var isNewer = remote.Value.CompareTo(current.Value) > 0;
         var release = ToRelease(manifest);
@@ -93,72 +97,109 @@ public static class UpdateService
     public static async Task<bool> InstallUpdateAsync(UpdateInfo info, CancellationToken ct = default)
     {
         if (!info.CanInstall || info.Asset is null)
-            throw new InvalidOperationException("В update.json нет доступного EXE с SHA-256 для безопасной установки.");
+            throw new InvalidOperationException("В update.json нет доступного ZIP с SHA-256 для безопасной установки.");
 
         var asset = info.Asset;
         var expectedDigest = ExtractSha256(asset.Digest!);
         var processPath = Environment.ProcessPath;
         if (string.IsNullOrWhiteSpace(processPath) || !processPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Автообновление доступно только для опубликованного EXE-файла.");
+            throw new InvalidOperationException("Автообновление доступно только для опубликованной Windows-сборки.");
 
         var appDirectory = Path.GetDirectoryName(processPath)!;
         if (!Directory.Exists(appDirectory))
             throw new DirectoryNotFoundException(appDirectory);
 
-        var downloadPath = Path.Combine(Path.GetTempPath(), $"RustedSpiwiStudio-{Guid.NewGuid():N}.exe");
-        var stagedPath = Path.Combine(appDirectory, $".RustedSpiwiStudio-update-{Guid.NewGuid():N}.exe");
-        var batchPath = Path.Combine(Path.GetTempPath(), $"RustedSpiwiStudio-update-{Guid.NewGuid():N}.bat");
+        var updateId = Guid.NewGuid().ToString("N");
+        var downloadPath = Path.Combine(Path.GetTempPath(), $"RustedSpiwiStudio-{updateId}.zip");
+        var scriptPath = Path.Combine(Path.GetTempPath(), $"RustedSpiwiStudio-update-{updateId}.ps1");
 
         try
         {
-            AppLog.Info($"UpdateService: downloading {asset.Name} from {asset.BrowserDownloadUrl}");
+            AppLog.Info($"UpdateService: downloading bundle {asset.Name} from {asset.BrowserDownloadUrl}");
             using (var response = await Http.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct))
             {
                 response.EnsureSuccessStatusCode();
                 await using var source = await response.Content.ReadAsStreamAsync(ct);
-                await using var destination = new FileStream(downloadPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
+                await using var destination = new FileStream(
+                    downloadPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None,
+                    128 * 1024,
+                    useAsync: true);
                 await source.CopyToAsync(destination, ct);
             }
 
             ct.ThrowIfCancellationRequested();
-            await using (var stream = new FileStream(downloadPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true))
+            await using (var stream = new FileStream(
+                downloadPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                128 * 1024,
+                useAsync: true))
             {
                 var actual = await SHA256.HashDataAsync(stream, ct);
                 var actualHex = Convert.ToHexString(actual).ToLowerInvariant();
+                var expectedHex = expectedDigest.ToLowerInvariant();
+
                 if (!CryptographicOperations.FixedTimeEquals(
                         Encoding.ASCII.GetBytes(actualHex),
-                        Encoding.ASCII.GetBytes(expectedDigest.ToLowerInvariant())))
-                    throw new InvalidDataException($"Проверка SHA-256 не пройдена. Ожидалось {expectedDigest}, получено {actualHex}.");
+                        Encoding.ASCII.GetBytes(expectedHex)))
+                {
+                    throw new InvalidDataException(
+                        $"Проверка SHA-256 не пройдена. Ожидалось {expectedDigest}, получено {actualHex}.");
+                }
             }
 
-            File.Copy(downloadPath, stagedPath, overwrite: false);
-
             var pid = Environment.ProcessId;
-            var batch = BuildUpdaterBatch(processPath, stagedPath, pid);
-            await File.WriteAllTextAsync(batchPath, batch, new UTF8Encoding(false), ct);
+            var script = BuildUpdaterScript(appDirectory, downloadPath, pid);
+            await File.WriteAllTextAsync(scriptPath, script, new UTF8Encoding(false), ct);
 
-            AppLog.Info($"UpdateService: SHA-256 verified. Staged update at {stagedPath}; updater={batchPath}");
-            Process.Start(new ProcessStartInfo
+            AppLog.Info($"UpdateService: ZIP SHA-256 verified. updater={scriptPath}");
+            var shell = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
+            var powershell = "powershell.exe";
+            var psi = new ProcessStartInfo
             {
-                FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe",
-                Arguments = $"/C \"\"{batchPath}\"\"",
+                FileName = powershell,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 WorkingDirectory = appDirectory
-            });
+            };
+            psi.ArgumentList.Add("-NoProfile");
+            psi.ArgumentList.Add("-NonInteractive");
+            psi.ArgumentList.Add("-ExecutionPolicy");
+            psi.ArgumentList.Add("Bypass");
+            psi.ArgumentList.Add("-File");
+            psi.ArgumentList.Add(scriptPath);
+
+            try
+            {
+                Process.Start(psi);
+            }
+            catch (Exception firstStartEx)
+            {
+                AppLog.Warn($"PowerShell updater start failed: {firstStartEx.Message}; trying Windows shell fallback.");
+                var fallback = new ProcessStartInfo
+                {
+                    FileName = shell,
+                    Arguments = $"/C powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{scriptPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    WorkingDirectory = appDirectory
+                };
+                Process.Start(fallback);
+            }
+
             return true;
         }
         catch
         {
             TryDelete(downloadPath);
-            TryDelete(stagedPath);
-            TryDelete(batchPath);
+            TryDelete(scriptPath);
             throw;
-        }
-        finally
-        {
-            TryDelete(downloadPath);
         }
     }
 
@@ -166,7 +207,9 @@ public static class UpdateService
         => new()
         {
             TagName = "v" + manifest.Version.TrimStart('v'),
-            Name = string.IsNullOrWhiteSpace(manifest.Title) ? "Rusted Шпижион Студия " + manifest.Version : manifest.Title,
+            Name = string.IsNullOrWhiteSpace(manifest.Title)
+                ? "Rusted Шпижион Студия " + manifest.Version
+                : manifest.Title,
             Body = string.Join(Environment.NewLine, manifest.Changes.Select(x => "- " + x)),
             HtmlUrl = manifest.ReleaseUrl,
             PublishedAt = manifest.Date
@@ -176,7 +219,9 @@ public static class UpdateService
         => new()
         {
             TagName = "v" + entry.Version.TrimStart('v'),
-            Name = string.IsNullOrWhiteSpace(entry.Title) ? "Rusted Шпижион Студия " + entry.Version : entry.Title,
+            Name = string.IsNullOrWhiteSpace(entry.Title)
+                ? "Rusted Шпижион Студия " + entry.Version
+                : entry.Title,
             Body = string.Join(Environment.NewLine, entry.Changes.Select(x => "- " + x)),
             HtmlUrl = entry.ReleaseUrl,
             PublishedAt = entry.Date
@@ -185,57 +230,161 @@ public static class UpdateService
     private static GitHubReleaseAsset ToAsset(UpdateManifest manifest)
         => new()
         {
-            Name = manifest.AssetName,
+            Name = string.IsNullOrWhiteSpace(manifest.AssetName)
+                ? $"RustedSpiwiStudio-{manifest.Version}-win-x64.zip"
+                : manifest.AssetName,
             BrowserDownloadUrl = manifest.DownloadUrl,
             Size = 0,
-            Digest = string.IsNullOrWhiteSpace(manifest.Sha256) ? null : "sha256:" + manifest.Sha256,
+            Digest = string.IsNullOrWhiteSpace(manifest.Sha256)
+                ? null
+                : "sha256:" + manifest.Sha256,
             State = "uploaded",
-            ContentType = "application/vnd.microsoft.portable-executable"
+            ContentType = "application/zip"
         };
 
     private static string ExtractSha256(string digest)
     {
         const string prefix = "sha256:";
-        if (!digest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || digest.Length != prefix.Length + 64)
+        if (!digest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            digest.Length != prefix.Length + 64)
+        {
             throw new InvalidDataException("update.json не содержит корректный SHA-256 digest.");
+        }
+
         return digest[prefix.Length..];
     }
 
-    private static string BuildUpdaterBatch(string appPath, string stagedPath, int pid)
+    private static string BuildUpdaterScript(string appDirectory, string zipPath, int pid)
     {
-        static string Quote(string value) => value.Replace("%", "%%").Replace("\"", "\"\"");
-        var app = Quote(appPath);
-        var staged = Quote(stagedPath);
-        return "@echo off\r\n" +
-               "setlocal EnableExtensions\r\n" +
-               $"set \"APP={app}\"\r\n" +
-               $"set \"NEW={staged}\"\r\n" +
-               $"set \"PID={pid}\"\r\n" +
-               ":wait_for_app\r\n" +
-               "tasklist /FI \"PID eq %PID%\" /NH | find \"%PID%\" >nul\r\n" +
-               "if not errorlevel 1 (\r\n" +
-               "  timeout /t 1 /nobreak >nul\r\n" +
-               "  goto wait_for_app\r\n" +
-               ")\r\n" +
-               ":replace\r\n" +
-               "move /Y \"%NEW%\" \"%APP%\" >nul 2>&1\r\n" +
-               "if errorlevel 1 (\r\n" +
-               "  timeout /t 1 /nobreak >nul\r\n" +
-               "  goto replace\r\n" +
-               ")\r\n" +
-               "start \"\" \"%APP%\"\r\n" +
-               "del \"%~f0\" >nul 2>&1\r\n" +
-               "exit /b 0\r\n";
+        static string PsQuote(string value)
+            => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
+
+        var app = PsQuote(appDirectory);
+        var zip = PsQuote(zipPath);
+        var protectedNames = new[]
+        {
+            "config.json",
+            "config.json.bak",
+            "index.db",
+            "index.db-wal",
+            "index.db-shm",
+            "app.log",
+            "rwmod-cache"
+        };
+
+        var protectedArray = string.Join(", ", protectedNames.Select(PsQuote));
+        var lines = new List<string>
+        {
+            "$ErrorActionPreference = 'Stop'",
+            "$ProgressPreference = 'SilentlyContinue'",
+            $"$AppDirectory = {app}",
+            $"$ZipPath = {zip}",
+            $"$Pid = {pid}",
+            "$MaxAttempts = 3",
+            "$RetryDelaySeconds = 5",
+            "$WaitForProcessTimeoutSeconds = 30",
+            "$BackupDirectory = Join-Path $env:TEMP ('RustedSpiwiStudio-backup-' + [guid]::NewGuid().ToString('N'))",
+            "$StageDirectory = Join-Path $env:TEMP ('RustedSpiwiStudio-stage-' + [guid]::NewGuid().ToString('N'))",
+            $"$Protected = @({protectedArray})",
+            "",
+            "function Test-Protected([string]$Name) {",
+            "    return $Protected -contains $Name",
+            "}",
+            "",
+            "function Wait-ForProcessExit {",
+            "    $deadline = (Get-Date).AddSeconds($WaitForProcessTimeoutSeconds)",
+            "    while ((Get-Date) -lt $deadline) {",
+            "        if (-not (Get-Process -Id $Pid -ErrorAction SilentlyContinue)) { return $true }",
+            "        Start-Sleep -Milliseconds 250",
+            "    }",
+            "    return -not (Get-Process -Id $Pid -ErrorAction SilentlyContinue)",
+            "}",
+            "",
+            "function Remove-ReleaseContent {",
+            "    Get-ChildItem -LiteralPath $AppDirectory -Force | ForEach-Object {",
+            "        if (Test-Protected $_.Name) { return }",
+            "        Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop",
+            "    }",
+            "}",
+            "",
+            "function Restore-Backup {",
+            "    if (-not (Test-Path -LiteralPath $BackupDirectory)) { return }",
+            "    Get-ChildItem -LiteralPath $BackupDirectory -Force | ForEach-Object {",
+            "        Copy-Item -LiteralPath $_.FullName -Destination $AppDirectory -Recurse -Force -ErrorAction Stop",
+            "    }",
+            "}",
+            "",
+            "try {",
+            "    if (-not (Wait-ForProcessExit)) { throw 'Основной процесс не завершился за отведённое время.' }",
+            "    Expand-Archive -LiteralPath $ZipPath -DestinationPath $StageDirectory -Force",
+            "    $PublishRoot = $StageDirectory",
+            "    $Nested = Get-ChildItem -LiteralPath $StageDirectory -Force",
+            "    if ($Nested.Count -eq 1 -and $Nested[0].PSIsContainer) {",
+            "        $PublishRoot = $Nested[0].FullName",
+            "    }",
+            "    if (-not (Test-Path -LiteralPath (Join-Path $PublishRoot 'RustedShpizhionStudio.exe'))) {",
+            "        throw 'В ZIP не найден RustedShpizhionStudio.exe.'",
+            "    }",
+            "",
+            "    New-Item -ItemType Directory -Path $BackupDirectory -Force | Out-Null",
+            "    Get-ChildItem -LiteralPath $AppDirectory -Force | ForEach-Object {",
+            "        if (Test-Protected $_.Name) { return }",
+            "        Copy-Item -LiteralPath $_.FullName -Destination $BackupDirectory -Recurse -Force -ErrorAction Stop",
+            "    }",
+            "",
+            "    $updated = $false",
+            "    for ($attempt = 1; $attempt -le $MaxAttempts -and -not $updated; $attempt++) {",
+            "        try {",
+            "            Remove-ReleaseContent",
+            "            Get-ChildItem -LiteralPath $PublishRoot -Force | ForEach-Object {",
+            "                Copy-Item -LiteralPath $_.FullName -Destination $AppDirectory -Recurse -Force -ErrorAction Stop",
+            "            }",
+            "            $updated = $true",
+            "        } catch {",
+            "            if ($attempt -ge $MaxAttempts) { throw }",
+            "            try { Restore-Backup } catch { }",
+            "            Start-Sleep -Seconds $RetryDelaySeconds",
+            "        }",
+            "    }",
+            "",
+            "    Remove-Item -LiteralPath $BackupDirectory -Recurse -Force -ErrorAction SilentlyContinue",
+            "    Remove-Item -LiteralPath $StageDirectory -Recurse -Force -ErrorAction SilentlyContinue",
+            "    Remove-Item -LiteralPath $ZipPath -Force -ErrorAction SilentlyContinue",
+            "    Start-Process -FilePath (Join-Path $AppDirectory 'RustedShpizhionStudio.exe') -WorkingDirectory $AppDirectory",
+            "} catch {",
+            "    try { Remove-ReleaseContent } catch { }",
+            "    try { Restore-Backup } catch { }",
+            "    try { Remove-Item -LiteralPath $StageDirectory -Recurse -Force -ErrorAction SilentlyContinue } catch { }",
+            "    try { Remove-Item -LiteralPath $BackupDirectory -Recurse -Force -ErrorAction SilentlyContinue } catch { }",
+            "    try { Remove-Item -LiteralPath $ZipPath -Force -ErrorAction SilentlyContinue } catch { }",
+            "    exit 1",
+            "}",
+            "",
+            "Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue",
+            "exit 0"
+        };
+
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
     private static void TryDelete(string path)
     {
-        try { if (!string.IsNullOrWhiteSpace(path) && File.Exists(path)) File.Delete(path); }
-        catch { }
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+        }
     }
 
-    private readonly record struct SemVersion(int Major, int Minor, int Patch, int Revision, string[] PreRelease)
-        : IComparable<SemVersion>
+    private readonly record struct SemVersion(
+        int Major,
+        int Minor,
+        int Patch,
+        int Revision,
+        string[] PreRelease) : IComparable<SemVersion>
     {
         public int CompareTo(SemVersion other)
         {
@@ -266,13 +415,17 @@ public static class UpdateService
                     numeric = leftNumber.CompareTo(rightNumber);
                     if (numeric != 0) return numeric;
                 }
-                else if (leftNumeric != rightNumeric) return leftNumeric ? -1 : 1;
+                else if (leftNumeric != rightNumeric)
+                {
+                    return leftNumeric ? -1 : 1;
+                }
                 else
                 {
                     numeric = string.CompareOrdinal(left, right);
                     if (numeric != 0) return numeric;
                 }
             }
+
             return PreRelease.Length.CompareTo(other.PreRelease.Length);
         }
     }
@@ -283,20 +436,39 @@ public static class UpdateService
     private static bool TryParseVersion(string raw, out SemVersion version)
     {
         version = default;
-        if (string.IsNullOrWhiteSpace(raw)) return false;
+        if (string.IsNullOrWhiteSpace(raw))
+            return false;
+
         var text = raw.Trim();
-        if (text.StartsWith('v')) text = text[1..];
+        if (text.StartsWith('v'))
+            text = text[1..];
+
         var plus = text.IndexOf('+');
-        if (plus >= 0) text = text[..plus];
+        if (plus >= 0)
+            text = text[..plus];
+
         var dash = text.IndexOf('-');
         var numericPart = dash >= 0 ? text[..dash] : text;
-        var prerelease = dash >= 0 ? text[(dash + 1)..].Split('.', StringSplitOptions.RemoveEmptyEntries) : [];
+        var prerelease = dash >= 0
+            ? text[(dash + 1)..].Split('.', StringSplitOptions.RemoveEmptyEntries)
+            : [];
         var numbers = numericPart.Split('.', StringSplitOptions.RemoveEmptyEntries);
-        if (numbers.Length is < 1 or > 4) return false;
+        if (numbers.Length is < 1 or > 4)
+            return false;
+
         var parsed = new int[4];
         for (var i = 0; i < numbers.Length; i++)
-            if (!int.TryParse(numbers[i], NumberStyles.None, CultureInfo.InvariantCulture, out parsed[i])) return false;
-        version = new SemVersion(parsed[0], numbers.Length > 1 ? parsed[1] : 0, numbers.Length > 2 ? parsed[2] : 0, numbers.Length > 3 ? parsed[3] : 0, prerelease);
+        {
+            if (!int.TryParse(numbers[i], NumberStyles.None, CultureInfo.InvariantCulture, out parsed[i]))
+                return false;
+        }
+
+        version = new SemVersion(
+            parsed[0],
+            numbers.Length > 1 ? parsed[1] : 0,
+            numbers.Length > 2 ? parsed[2] : 0,
+            numbers.Length > 3 ? parsed[3] : 0,
+            prerelease);
         return true;
     }
 }

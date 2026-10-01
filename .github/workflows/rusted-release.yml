@@ -51,7 +51,7 @@ jobs:
         if: steps.version.outputs.changed == 'True'
         run: dotnet restore RustedShpizhionStudio.sln
 
-      - name: Publish
+      - name: Publish Native AOT bundle
         if: steps.version.outputs.changed == 'True'
         run: >
           dotnet publish RustedShpizhionStudio.csproj
@@ -59,21 +59,43 @@ jobs:
           -r win-x64
           --self-contained true
           -p:PublishAot=true
-          -p:PublishSingleFile=true
+          -p:PublishSingleFile=false
           -p:PublishTrimmed=true
           -o publish
 
-      - name: Package
+      - name: Validate and package minimal bundle
         if: steps.version.outputs.changed == 'True'
         id: package
         shell: pwsh
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          $required = @(
+            "publish\RustedShpizhionStudio.exe",
+            "publish\libSkiaSharp.dll",
+            "publish\libHarfBuzzSharp.dll",
+            "publish\av_libglesv2.dll",
+            "publish\favicon.ico",
+            "publish\resources\rusted_warfare_docs.db"
+          )
+          $missing = @($required | Where-Object { -not (Test-Path $_) })
+          if ($missing.Count -gt 0) { throw ("Не найдены обязательные файлы публикации: " + ($missing -join ", ")) }
+
           $zipName = "RustedSpiwiStudio-$env:VERSION-win-x64.zip"
-          Compress-Archive -Path "publish\*" -DestinationPath $zipName -Force
-          $exePath = Join-Path $PWD "publish\RustedShpizhionStudio.exe"
-          $sha256 = (Get-FileHash -Path $exePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          Push-Location publish
+          try {
+            Compress-Archive -Path @(
+              "RustedShpizhionStudio.exe",
+              "libSkiaSharp.dll",
+              "libHarfBuzzSharp.dll",
+              "av_libglesv2.dll",
+              "favicon.ico",
+              "resources\rusted_warfare_docs.db"
+            ) -DestinationPath (Join-Path $PWD "..\$zipName") -CompressionLevel Optimal -Force
+          } finally { Pop-Location }
+
+          $zipPath = Join-Path $PWD $zipName
+          $sha256 = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
           "zip_name=$zipName" >> $env:GITHUB_OUTPUT
           "sha256=$sha256" >> $env:GITHUB_OUTPUT
 
@@ -109,9 +131,8 @@ jobs:
           if (gh release view $tag --repo $env:REPOSITORY *> $null) {
             gh release edit $tag --repo $env:REPOSITORY --title $title --notes-file release-notes.md
             gh release upload $tag "$env:ZIP_NAME" --repo $env:REPOSITORY --clobber
-            gh release upload $tag "publish\RustedShpizhionStudio.exe" --repo $env:REPOSITORY --clobber
           } else {
-            gh release create $tag "$env:ZIP_NAME" "publish\RustedShpizhionStudio.exe" --repo $env:REPOSITORY --title $title --notes-file release-notes.md
+            gh release create $tag "$env:ZIP_NAME" --repo $env:REPOSITORY --title $title --notes-file release-notes.md
           }
 
       - name: Update version manifest
@@ -125,7 +146,7 @@ jobs:
         run: |
           $tag = "v$env:VERSION"
           $releaseUrl = "https://github.com/$env:REPOSITORY/releases/tag/$tag"
-          $downloadUrl = "https://github.com/$env:REPOSITORY/releases/download/$tag/RustedShpizhionStudio.exe"
+          $downloadUrl = "https://github.com/$env:REPOSITORY/releases/download/$tag/$env:ZIP_NAME"
           $date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
           $changes = @(Get-Content release-notes.md | Where-Object { $_.Trim().Length -gt 0 } | ForEach-Object { $_.Trim() -replace '^[-*+]\s+', '' })
           $entry = [ordered]@{
@@ -134,7 +155,7 @@ jobs:
             date = $date
             releaseUrl = $releaseUrl
             downloadUrl = $downloadUrl
-            assetName = "RustedShpizhionStudio.exe"
+            assetName = $env:ZIP_NAME
             sha256 = $env:SHA256
             changes = $changes
           }
@@ -158,7 +179,7 @@ jobs:
             date = $date
             releaseUrl = $releaseUrl
             downloadUrl = $downloadUrl
-            assetName = "RustedShpizhionStudio.exe"
+            assetName = $env:ZIP_NAME
             sha256 = $env:SHA256
             changes = $changes
             history = $newHistory

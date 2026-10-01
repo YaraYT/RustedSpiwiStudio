@@ -7,7 +7,7 @@
         x:CompileBindings="True"
         Width="1500" Height="930" MinWidth="1100" MinHeight="700"
         WindowState="Maximized"
-        Title="Rusted Шпижион Студия 0.1.2">
+        Title="{Binding WindowTitle}">
   <Window.Styles>
     <Style Selector="ProgressBar.animated-progress">
       <Setter Property="Foreground" Value="#4CD97B" />
@@ -24,7 +24,7 @@
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,145,112,120,88,82" ColumnSpacing="8" VerticalAlignment="Center">
         <StackPanel Spacing="1" VerticalAlignment="Center">
           <TextBlock Text="Rusted Шпижион Студия" FontSize="20" FontWeight="SemiBold" />
-          <Button Classes="version-link" Content="0.1.2" FontSize="11" Padding="0" Height="16" Click="Version_Click" ToolTip.Tip="Что нового" HorizontalAlignment="Left" />
+          <Button Classes="version-link" Content="{Binding VersionText}" FontSize="11" Padding="0" Height="16" Click="Version_Click" ToolTip.Tip="Что нового" HorizontalAlignment="Left" />
         </StackPanel>
         <TextBox Classes="search-box" Grid.Column="1" Margin="12,0,4,0" Height="40" VerticalContentAlignment="Center" PlaceholderText="Поиск файла, пути, мода или имени юнита…" Text="{Binding SearchQuery}" KeyDown="SearchBox_KeyDown" TextChanged="SearchBox_TextChanged" />
         <Button Grid.Column="2" Height="40" Classes="secondary" Content="Что нового" Click="Version_Click" />
