@@ -8,281 +8,405 @@
         Width="1500" Height="930" MinWidth="1100" MinHeight="700"
         WindowState="Maximized"
         Title="{Binding WindowTitle}">
-  <Window.Styles>
-    <Style Selector="ProgressBar.animated-progress">
-      <Setter Property="Foreground" Value="#4CD97B" />
-      <Setter Property="Background" Value="#242A32" />
-    </Style>
-    <Style Selector="Border.busy-overlay">
-      <Setter Property="Background" Value="#D9101318" />
-      <Setter Property="CornerRadius" Value="10" />
-    </Style>
-  </Window.Styles>
 
-  <Grid RowDefinitions="64,*" ColumnDefinitions="Auto,*">
-    <Border Grid.Row="0" Grid.ColumnSpan="2" Background="#161A21" BorderBrush="#28303B" BorderThickness="0,0,0,1" Padding="16,10">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto,145,112,120,88,82" ColumnSpacing="8" VerticalAlignment="Center">
-        <StackPanel Spacing="1" VerticalAlignment="Center">
-          <TextBlock Text="Rusted Шпижион Студия" FontSize="20" FontWeight="SemiBold" />
-          <Button Classes="version-link" Content="{Binding VersionText}" FontSize="11" Padding="0" Height="16" Click="Version_Click" ToolTip.Tip="Что нового" HorizontalAlignment="Left" />
+  <Grid RowDefinitions="68,*">
+    <!-- Header -->
+    <Border Grid.Row="0"
+            Background="#141820"
+            BorderBrush="#222A35"
+            BorderThickness="0,0,0,1"
+            Padding="16,10">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="7" VerticalAlignment="Center">
+        <StackPanel Spacing="0" VerticalAlignment="Center" Margin="0,0,8,0">
+          <TextBlock Text="Rusted Шпижион Студия" FontSize="19" FontWeight="SemiBold" />
+          <Button Classes="version-link" Content="{Binding VersionText}" FontSize="10" Padding="0" Height="15"
+                  Click="Version_Click" ToolTip.Tip="Что нового" HorizontalAlignment="Left" />
         </StackPanel>
-        <TextBox Classes="search-box" Grid.Column="1" Margin="12,0,4,0" Height="40" VerticalContentAlignment="Center" PlaceholderText="Поиск файла, пути, мода или имени юнита…" Text="{Binding SearchQuery}" KeyDown="SearchBox_KeyDown" TextChanged="SearchBox_TextChanged" />
-        <Button Grid.Column="2" Height="40" Classes="secondary" Content="Что нового" Click="Version_Click" />
-        <Button Grid.Column="3" Height="40" Classes="secondary" Content="Проверить обновление" Click="CheckUpdate_Click" />
-        <ComboBox Grid.Column="4" Height="40" MinWidth="145" VerticalContentAlignment="Center" SelectedIndex="{Binding DisplayFilterIndex}">
+
+        <Grid Grid.Column="1" Margin="8,0,8,0">
+          <TextBox Classes="search-box"
+                   Height="42"
+                   VerticalContentAlignment="Center"
+                   PlaceholderText="⌕   Поиск файла, пути, мода или имени юнита…"
+                   Text="{Binding SearchQuery}"
+                   KeyDown="SearchBox_KeyDown"
+                   TextChanged="SearchBox_TextChanged" />
+        </Grid>
+
+        <ComboBox Grid.Column="2" Height="42" MinWidth="130" VerticalContentAlignment="Center" SelectedIndex="{Binding DisplayFilterIndex}">
           <ComboBoxItem Content="Все варианты" />
           <ComboBoxItem Content="Рабочие" />
           <ComboBoxItem Content="Неиспользуемые" />
         </ComboBox>
-        <Button Grid.Column="5" Height="40" Classes="secondary" Content="Настройки" Click="Settings_Click" />
-        <Button Grid.Column="6" Height="40" Classes="secondary" Content="{Binding FullscreenButtonText}" Click="ToggleFullscreen_Click" />
-        <Button Grid.Column="7" Height="40" Classes="secondary" Content="Свернуть" Click="Minimize_Click" />
-        <Button Grid.Column="8" Height="40" Classes="primary" Content="Выйти" Click="Exit_Click" />
+        <Button Grid.Column="3" Classes="icon-button" Content="⟳" Click="CheckUpdate_Click" ToolTip.Tip="Проверить обновления" />
+        <Button Grid.Column="4" Classes="icon-button" Content="⚙" Click="Settings_Click" ToolTip.Tip="Настройки" />
+        <Button Grid.Column="5" Classes="icon-button" Content="⛶" Click="ToggleFullscreen_Click" ToolTip.Tip="Полный экран / оконный режим" />
+        <Button Grid.Column="6" Classes="icon-button" Content="—" Click="Minimize_Click" ToolTip.Tip="Свернуть" />
+        <Button Grid.Column="7" Classes="icon-button" Content="×" Click="Exit_Click" ToolTip.Tip="Выйти" />
       </Grid>
     </Border>
 
-    <Border Grid.Row="1" Grid.Column="0" Width="300" IsVisible="{Binding IsFiltersPanelVisible}" Background="#14181E" BorderBrush="#28303B" BorderThickness="0,0,1,0" Padding="12">
-      <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="14">
-          <Border Classes="panel" Padding="12">
-            <StackPanel Spacing="7">
-              <TextBlock Classes="kicker" Text="ИНДЕКС" />
-              <TextBlock Text="{Binding IndexStateText}" />
-              <TextBlock Classes="muted" Text="{Binding StatsText}" TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <Border Classes="panel-soft" Padding="10">
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+      <!-- Filters -->
+      <Border Grid.Column="0"
+              Width="286"
+              IsVisible="{Binding IsFiltersPanelVisible}"
+              Background="#12161D"
+              BorderBrush="#222A35"
+              BorderThickness="0,0,1,0"
+              Padding="12,14">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
               <StackPanel Spacing="2">
-                <TextBlock Classes="kicker" Text="ЧТО НОВОГО" />
-                <TextBlock Classes="muted" Text="История версий и изменения загружаются из update.json." TextWrapping="Wrap" />
+                <TextBlock Classes="kicker" Text="ФИЛЬТРЫ" />
+                <TextBlock Text="Настройка выдачи" FontSize="16" FontWeight="SemiBold" />
               </StackPanel>
-              <Button Grid.Column="1" Classes="secondary" FontSize="11" Padding="9,5" Content="✓ Что нового" Click="Version_Click" />
+              <Button Grid.Column="1" Classes="secondary" Padding="9,6" FontSize="11" Content="Сбросить" Click="ResetFilters_Click"
+                      ToolTip.Tip="Вернуть все фильтры в исходное состояние" />
             </Grid>
-          </Border>
 
-          <StackPanel Spacing="5">
-            <DockPanel>
-              <TextBlock Classes="kicker" Text="МОДЫ" DockPanel.Dock="Left" />
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="5">
-                <Button Classes="secondary" FontSize="11" Padding="8,5" Content="Все" Click="AllMods_Click" />
-                <Button Classes="secondary" FontSize="11" Padding="8,5" Content="Сброс" Click="NoMods_Click" />
+            <Border Classes="panel-soft" Padding="10">
+              <StackPanel Spacing="6">
+                <TextBlock Classes="kicker" Text="ИНДЕКС" />
+                <TextBlock Text="{Binding IndexStateText}" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" Text="{Binding StatsText}" TextWrapping="Wrap" FontSize="12" />
               </StackPanel>
-            </DockPanel>
-            <ListBox ItemsSource="{Binding ModFilters}" Background="Transparent" BorderThickness="0" MaxHeight="250">
+            </Border>
+
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <ToggleButton Classes="filter-header" IsChecked="{Binding IsModsFilterExpanded}">
+                <Grid ColumnDefinitions="22,*,Auto" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding ModsFilterGlyph}" FontSize="19" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="kicker" Text="МОДЫ" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Classes="muted" Margin="0,3,0,0" Text="{Binding ModsFilterSummary}" FontSize="11" VerticalAlignment="Center" />
+                </Grid>
+              </ToggleButton>
+              <Button Grid.Column="1" Classes="filter-reset" Content="Сбросить" Click="ResetModsFilters_Click" />
+            </Grid>
+            <ListBox ItemsSource="{Binding ModFilters}"
+                     IsVisible="{Binding IsModsFilterExpanded}"
+                     Background="Transparent" BorderThickness="0" MaxHeight="250" Margin="22,0,0,0">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="local:ModFilterItem">
-                  <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" Margin="0,2" />
+                  <CheckBox Classes="filter-option" IsChecked="{Binding IsSelected}">
+                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" MaxLines="2" />
+                  </CheckBox>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-          </StackPanel>
 
-          <StackPanel Spacing="7">
-            <DockPanel>
-              <TextBlock Classes="kicker" Text="ОСНОВНОЙ ТИП" DockPanel.Dock="Left" />
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="5">
-                <Button Classes="secondary" FontSize="11" Padding="8,5" Content="Все" Click="AllResourceTypes_Click" />
-                <Button Classes="secondary" FontSize="11" Padding="8,5" Content="Сброс" Click="NoneResourceTypes_Click" />
-              </StackPanel>
-            </DockPanel>
-            <ItemsControl ItemsSource="{Binding ResourceTypeFilters}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <ToggleButton Classes="filter-header" IsChecked="{Binding IsResourceTypesFilterExpanded}">
+                <Grid ColumnDefinitions="22,*,Auto" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding ResourceTypesFilterGlyph}" FontSize="19" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="kicker" Text="ОСНОВНОЙ ТИП" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Classes="muted" Margin="0,3,0,0" Text="{Binding ResourceTypesFilterSummary}" FontSize="11" VerticalAlignment="Center" />
+                </Grid>
+              </ToggleButton>
+              <Button Grid.Column="1" Classes="filter-reset" Content="Сбросить" Click="ResetResourceTypesFilters_Click" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding ResourceTypeFilters}" IsVisible="{Binding IsResourceTypesFilterExpanded}" Margin="22,0,0,0">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="local:ResourceFilterItem">
-                  <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" Margin="0,2" />
+                  <CheckBox Classes="filter-option" IsChecked="{Binding IsSelected}">
+                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" MaxLines="2" />
+                  </CheckBox>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <DockPanel Margin="0,8,0,0">
-              <TextBlock Classes="kicker" Text="ПОДТИП" DockPanel.Dock="Left" />
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="5">
-                <Button Classes="secondary" FontSize="11" Padding="8,5" Content="Все" Click="AllResourceSubtypes_Click" />
-                <Button Classes="secondary" FontSize="11" Padding="8,5" Content="Сброс" Click="NoneResourceSubtypes_Click" />
-              </StackPanel>
-            </DockPanel>
-            <ItemsControl ItemsSource="{Binding ResourceSubtypeFilters}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="local:ResourceFilterItem">
-                  <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding DisplayName}" Margin="0,2" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <CheckBox IsChecked="{Binding BrokenOnly}" Content="Только ресурсы с битыми ссылками" Margin="0,5" />
-          </StackPanel>
-
-          <CheckBox Content="Скрывать битые ссылки" IsChecked="{Binding Config.HideBroken}" Click="FilterChanged_Click" />
-        </StackPanel>
-      </ScrollViewer>
-    </Border>
-
-    <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto" ColumnDefinitions="*,Auto" Margin="12">
-      <Border Grid.Column="0" Background="#15181E" CornerRadius="11" Padding="12" Margin="0,0,10,0">
-        <Grid RowDefinitions="Auto,*,Auto">
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,10" ColumnSpacing="8">
-            <StackPanel>
-              <TextBlock Text="Ресурсы" FontSize="18" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" Text="{Binding ResultSummary}" />
-            </StackPanel>
-            <Button Grid.Column="1" Height="40" Classes="secondary" Content="Обновить" Click="Search_Click" />
-            <Button Grid.Column="2" Height="40" Classes="secondary" Content="Пересканировать" IsVisible="{Binding RescanVisible}" Click="Rescan_Click" />
-            <Button Grid.Column="3" Height="40" Classes="secondary" Content="{Binding FiltersButtonText}" Click="ToggleFilters_Click" />
-          </Grid>
-
-          <Grid Grid.Row="1">
-            <ScrollViewer x:Name="CardScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                          ScrollChanged="CardScrollViewer_ScrollChanged" SizeChanged="CardScrollViewer_SizeChanged">
-              <ItemsRepeater x:Name="CardRepeater" ItemsSource="{Binding Items}" HorizontalAlignment="Stretch" VerticalAlignment="Top">
-                <ItemsRepeater.Layout>
-                  <layout:UniformGridLayout Orientation="Horizontal" MinColumnSpacing="10" MinRowSpacing="10" />
-                </ItemsRepeater.Layout>
-                <ItemsRepeater.ItemTemplate>
-                  <DataTemplate x:DataType="local:ImageItemViewModel">
-                    <Button Classes="gallery-card" Tag="{Binding}" Click="Card_Click" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" MinWidth="{Binding CardWidth}" Height="{Binding CardHeight}">
-                      <Border Classes="panel" Padding="9" Opacity="1" Loaded="CardRoot_Loaded">
-                        <StackPanel Spacing="7">
-                          <Border Background="#0E1116" BorderBrush="#252B35" BorderThickness="1" CornerRadius="8" Height="{Binding PreviewHeight}" Padding="{Binding PreviewPadding}" Opacity="1">
-                            <Grid>
-                              <Image Source="{Binding Thumbnail}" Opacity="{Binding ThumbnailOpacity}" Stretch="Uniform" Loaded="Thumbnail_Loaded" />
-                              <TextBlock Text="…" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsThumbnailPlaceholderVisible}" Opacity="0.55" />
-                              <TextBlock Text="⚠" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsThumbnailErrorVisible}" Opacity="0.75" />
-                            </Grid>
-                          </Border>
-                          <TextBlock Text="{Binding Filename}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          <TextBlock Classes="muted" Text="{Binding PathAndMod}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                          <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Classes="muted" Text="{Binding DimensionsText}" FontSize="11" />
-                            <TextBlock Grid.Column="1" Text="{Binding ResourceTypeDisplay}" FontSize="11" TextTrimming="CharacterEllipsis" />
-                          </Grid>
-                        </StackPanel>
-                      </Border>
-                    </Button>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <ToggleButton Classes="filter-header" IsChecked="{Binding IsResourceSubtypesFilterExpanded}">
+                <Grid ColumnDefinitions="22,*,Auto" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding ResourceSubtypesFilterGlyph}" FontSize="19" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="kicker" Text="ПОДТИП" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Classes="muted" Margin="0,3,0,0" Text="{Binding ResourceSubtypesFilterSummary}" FontSize="11" VerticalAlignment="Center" />
+                </Grid>
+              </ToggleButton>
+              <Button Grid.Column="1" Classes="filter-reset" Content="Сбросить" Click="ResetResourceSubtypesFilters_Click" />
+            </Grid>
+            <ScrollViewer IsVisible="{Binding IsResourceSubtypesFilterExpanded}" MaxHeight="250" Margin="22,0,0,0" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding ResourceSubtypeFilters}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="local:ResourceFilterItem">
+                    <CheckBox Classes="filter-option" IsChecked="{Binding IsSelected}">
+                      <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" MaxLines="2" />
+                    </CheckBox>
                   </DataTemplate>
-                </ItemsRepeater.ItemTemplate>
-              </ItemsRepeater>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </ScrollViewer>
 
-            <Border IsVisible="{Binding IsIndexEmptyStateVisible}" Background="#101218" BorderBrush="#272D38" BorderThickness="1" CornerRadius="10" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="620">
-              <StackPanel Spacing="10" HorizontalAlignment="Center">
-                <TextBlock Text="{Binding EmptyStateTitle}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock Text="{Binding EmptyStateText}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="540" />
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
-                  <Button Classes="primary" Content="Настроить источник" Click="Settings_Click" />
-                  <Button Classes="secondary" Content="Сканировать" Click="Scan_Click" />
-                </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <ToggleButton Classes="filter-header" IsChecked="{Binding IsStateFilterExpanded}">
+                <Grid ColumnDefinitions="22,*,Auto" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding StateFilterGlyph}" FontSize="19" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="kicker" Text="СОСТОЯНИЕ" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Classes="muted" Margin="0,3,0,0" Text="Фильтры" FontSize="11" VerticalAlignment="Center" />
+                </Grid>
+              </ToggleButton>
+              <Button Grid.Column="1" Classes="filter-reset" Content="Сбросить" Click="ResetStateFilter_Click" />
+            </Grid>
+            <StackPanel IsVisible="{Binding IsStateFilterExpanded}" Spacing="3" Margin="22,0,0,0">
+              <CheckBox Classes="filter-option" IsChecked="{Binding BrokenOnly}">
+                <TextBlock Text="Только битые ссылки" TextWrapping="Wrap" MaxLines="2" />
+              </CheckBox>
+              <CheckBox x:Name="HideBrokenFilterBox" Classes="filter-option" IsChecked="{Binding Config.HideBroken}" Click="FilterChanged_Click">
+                <TextBlock Text="Скрывать битые ссылки" TextWrapping="Wrap" MaxLines="2" />
+              </CheckBox>
+            </StackPanel>
+
+            <Border Classes="panel-soft" Padding="10" Margin="0,2,0,0">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="kicker" Text="ПОДСКАЗКА" />
+                <TextBlock Classes="muted" Text="Полный путь к ресурсу доступен в подсказке карточки." TextWrapping="Wrap" FontSize="11" />
               </StackPanel>
             </Border>
-
-            <Border IsVisible="{Binding IsNoResultsStateVisible}" Background="#101218" BorderBrush="#272D38" BorderThickness="1" CornerRadius="10" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="620">
-              <StackPanel Spacing="10" HorizontalAlignment="Center">
-                <TextBlock Text="{Binding EmptyStateTitle}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock Text="{Binding EmptyStateText}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="540" />
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
-                  <Button Classes="secondary" Content="Очистить поиск" Click="ClearSearch_Click" />
-                  <Button Classes="secondary" Content="Пересканировать" IsVisible="{Binding RescanVisible}" Click="Rescan_Click" />
-                </StackPanel>
-              </StackPanel>
-            </Border>
-          </Grid>
-
-          <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-            <TextBlock Classes="muted" Text="{Binding EndOfListText}" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Classes="secondary" Content="Показать ещё" IsVisible="{Binding HasMore}" Click="LoadMore_Click" />
-          </Grid>
-        </Grid>
-      </Border>
-
-      <Border Grid.Column="1" Width="360" Background="#15181E" CornerRadius="11" Padding="12"
-              IsVisible="{Binding DetailVisible}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="12">
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
-              <TextBlock Classes="kicker" Text="ПРЕДПРОСМОТР" VerticalAlignment="Center" />
-              <Button Grid.Column="1" Height="40" Classes="secondary" Content="← Назад" IsEnabled="{Binding CanNavigateBack}" Click="Back_Click" />
-              <Button Grid.Column="2" Height="40" Classes="secondary" Content="Вперёд →" IsEnabled="{Binding CanNavigateForward}" Click="Forward_Click" />
-            </Grid>
-            <TextBlock Text="{Binding DetailTitle}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding DetailVisible}">
-              <TextBlock Classes="muted" Text="{Binding DetailTypeText}" />
-              <TextBlock Classes="muted" Text="{Binding DetailUsageText}" />
-            </StackPanel>
-            <TextBlock Classes="muted" Text="{Binding DetailSubtitle}" TextWrapping="Wrap" />
-            <Border Background="#0E1116" BorderBrush="#252B35" BorderThickness="1" CornerRadius="9" Height="260">
-              <Image Source="{Binding DetailBitmap}" Stretch="Uniform" />
-            </Border>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <Button Classes="secondary" Content="Открыть папку" IsVisible="{Binding DetailCanOpenFolder}" Click="OpenDetailFolder_Click" />
-              <Button Classes="secondary" Content="Скопировать путь" IsVisible="{Binding DetailCanCopyPath}" Click="CopyDetailPath_Click" />
-            </StackPanel>
-            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding DetailVisible}">
-              <TextBlock Classes="kicker" Text="ССЫЛКИ / РЕСУРСЫ" VerticalAlignment="Center" />
-              <Button Grid.Column="1" Classes="secondary" FontSize="11" Padding="9,5"
-                      Content="{Binding DetailReferencesToggleText}"
-                      IsVisible="{Binding DetailHasReferenceList}"
-                      Click="ToggleDetailReferences_Click" />
-            </Grid>
-            <ItemsControl ItemsSource="{Binding DetailReferences}"
-                          IsVisible="{Binding DetailReferencesExpanded}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="local:ReferenceItemViewModel">
-                  <Border Classes="panel-soft" Padding="8" Margin="0,0,0,6">
-                    <StackPanel Spacing="4">
-                      <TextBlock Text="{Binding KeyText}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                      <TextBlock Classes="muted" Text="{Binding ValueText}" TextWrapping="Wrap" />
-                      <TextBlock Classes="muted" Text="{Binding StatusText}" FontSize="11" />
-                      <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Button Classes="secondary" Content="Открыть юнит" IsVisible="{Binding CanOpenUnit}" Tag="{Binding}" Click="ReferenceUnit_Click" />
-                        <Button Classes="secondary" Content="Открыть изображение" IsVisible="{Binding CanOpenImage}" Tag="{Binding}" Click="ReferenceImage_Click" />
-                      </StackPanel>
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock Classes="kicker" Text="БИТЫЕ ССЫЛКИ" IsVisible="{Binding DetailHasMissingReferences}" />
-            <ItemsControl ItemsSource="{Binding DetailMissingReferences}" IsVisible="{Binding DetailReferencesExpanded}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="local:ReferenceItemViewModel">
-                  <Border Background="#21191D" CornerRadius="6" Padding="8" Margin="0,0,0,6">
-                    <StackPanel Spacing="3">
-                      <TextBlock Text="{Binding KeyText}" FontWeight="SemiBold" />
-                      <TextBlock Classes="muted" Text="{Binding ValueText}" TextWrapping="Wrap" />
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
           </StackPanel>
         </ScrollViewer>
       </Border>
 
-      <Border x:Name="BusyOverlay" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="busy-overlay"
-              IsVisible="True" Opacity="{Binding BusyOverlayOpacity}" IsHitTestVisible="{Binding BusyOverlayVisible}" Margin="0" Padding="24"
-              ZIndex="100" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="460">
-          <TextBlock Text="{Binding BusyOverlayText}" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" />
-          <TextBlock Text="{Binding ActivityIndicatorText}" Classes="muted" FontSize="16" HorizontalAlignment="Center" />
-          <TextBlock Text="Подождите, программа выполняет операцию. Окно не зависло." Classes="muted" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
-        </StackPanel>
-      </Border>
-    </Grid>
+      <!-- Workspace -->
+      <Grid x:Name="WorkspaceGrid" Grid.Column="1" ColumnDefinitions="*" Margin="12" SizeChanged="WorkspaceGrid_SizeChanged">
+        <!-- Gallery -->
+        <Border Grid.Column="0" Background="#13171E" CornerRadius="12" Padding="12" Margin="0,0,10,0">
+          <Grid RowDefinitions="Auto,*,Auto">
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,10" ColumnSpacing="7">
+              <StackPanel>
+                <TextBlock Classes="section-title" Text="Ресурсы" />
+                <TextBlock Classes="muted" Text="{Binding ResultSummary}" FontSize="12" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="secondary" Height="38" Content="Обновить" Click="Search_Click" ToolTip.Tip="Обновить текущую выдачу" />
+              <Button Grid.Column="2" Classes="secondary" Height="38" Content="Пересканировать" IsVisible="{Binding RescanVisible}" Click="Rescan_Click" />
+              <Button Grid.Column="3" Classes="secondary" Height="38" Content="{Binding FiltersButtonText}" Click="ToggleFilters_Click" />
+            </Grid>
 
-    <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="1" Background="#161A21" BorderBrush="#28303B" BorderThickness="1"
-            Padding="14,9" IsVisible="{Binding ScanPanelVisible}" VerticalAlignment="Bottom" Margin="12"
-            CornerRadius="9" ZIndex="90">
-      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-        <StackPanel Spacing="4">
-          <StackPanel Orientation="Horizontal" Spacing="9">
-            <TextBlock Classes="muted" Text="{Binding StatusText}" VerticalAlignment="Center" />
-            <TextBlock Classes="muted" Text="{Binding ProgressText}" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding ActivityIndicatorText}" VerticalAlignment="Center" FontSize="16" />
+            <Grid Grid.Row="1">
+              <ScrollViewer x:Name="CardScrollViewer"
+                            VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Disabled"
+                            ScrollChanged="CardScrollViewer_ScrollChanged"
+                            SizeChanged="CardScrollViewer_SizeChanged">
+                <ItemsRepeater x:Name="CardRepeater" ItemsSource="{Binding Items}" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                  <ItemsRepeater.Layout>
+                    <layout:UniformGridLayout Orientation="Horizontal" MinColumnSpacing="10" MinRowSpacing="10" />
+                  </ItemsRepeater.Layout>
+                  <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="local:ImageItemViewModel">
+                      <Button Classes="gallery-card"
+                              Tag="{Binding}"
+                              Click="Card_Click"
+                              HorizontalContentAlignment="Stretch"
+                              HorizontalAlignment="Stretch"
+                              MinWidth="{Binding CardWidth}"
+                              Height="{Binding CardHeight}">
+                        <Border Classes="card-surface" Padding="9" Opacity="1" Loaded="CardRoot_Loaded">
+                          <Grid RowDefinitions="*,Auto" Margin="0">
+                            <Border Background="#0D1117" BorderBrush="#202832" BorderThickness="1" CornerRadius="8" Height="{Binding PreviewHeight}" Padding="{Binding PreviewPadding}">
+                              <Grid>
+                                <Image Source="{Binding Thumbnail}" Opacity="{Binding ThumbnailOpacity}" Stretch="Uniform" Loaded="Thumbnail_Loaded" />
+                                <TextBlock Text="…" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsThumbnailPlaceholderVisible}" Opacity="0.45" />
+                                <TextBlock Text="⚠" FontSize="19" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsThumbnailErrorVisible}" Opacity="0.75" />
+                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8">
+                                  <Border Classes="resource-badge">
+                                    <TextBlock Text="{Binding ResourceType}" />
+                                  </Border>
+                                  <Border Classes="resource-badge">
+                                    <TextBlock Text="{Binding ResourceSubtype}" />
+                                  </Border>
+                                </StackPanel>
+                              </Grid>
+                            </Border>
+                            <StackPanel Grid.Row="1" Spacing="5" Margin="2,8,2,0">
+                              <TextBlock Text="{Binding Filename}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Classes="muted" Text="{Binding PathAndMod}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FullPath}" FontSize="12" />
+                              <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Classes="muted" Text="{Binding DimensionsText}" FontSize="11" />
+                                <TextBlock Grid.Column="1" Classes="muted" Text="{Binding ResourceTypeDisplay}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                              </Grid>
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+              </ScrollViewer>
+
+              <Border IsVisible="{Binding IsIndexEmptyStateVisible}" Background="#10141A" BorderBrush="#252C36" BorderThickness="1" CornerRadius="11" Padding="26" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="620">
+                <StackPanel Spacing="10" HorizontalAlignment="Center">
+                  <TextBlock Text="{Binding EmptyStateTitle}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="{Binding EmptyStateText}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="540" />
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
+                    <Button Classes="primary" Content="Настроить источник" Click="Settings_Click" />
+                    <Button Classes="secondary" Content="Сканировать" Click="Scan_Click" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+              <Border IsVisible="{Binding IsNoResultsStateVisible}" Background="#10141A" BorderBrush="#252C36" BorderThickness="1" CornerRadius="11" Padding="26" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="620">
+                <StackPanel Spacing="10" HorizontalAlignment="Center">
+                  <TextBlock Text="{Binding EmptyStateTitle}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="{Binding EmptyStateText}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="540" />
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
+                    <Button Classes="secondary" Content="Очистить поиск" Click="ClearSearch_Click" />
+                    <Button Classes="secondary" Content="Пересканировать" IsVisible="{Binding RescanVisible}" Click="Rescan_Click" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+              <TextBlock Classes="muted" Text="{Binding EndOfListText}" VerticalAlignment="Center" FontSize="11" />
+              <Button Grid.Column="1" Classes="secondary" Content="Показать ещё" IsVisible="{Binding HasMore}" Click="LoadMore_Click" />
+            </Grid>
+          </Grid>
+        </Border>
+
+        <!-- The preview is a true overlay. It never participates in gallery measurement, so opening, expanding, scrolling and closing it do not move cards. -->
+        <Canvas x:Name="DetailOverlayCanvas" Grid.Column="0" ClipToBounds="False" Panel.ZIndex="80" IsVisible="{Binding DetailVisible}">
+          <Border x:Name="DetailPanel"
+                  Width="{Binding DetailPanelWidth}"
+                  MinWidth="350"
+                  MaxWidth="920"
+                  Canvas.Right="0"
+                  Canvas.Top="0"
+                  Background="#151A22"
+                  BorderBrush="#2A3441"
+                  BorderThickness="1"
+                  CornerRadius="12"
+                  Padding="14"
+                  IsVisible="{Binding DetailVisible}"
+                  IsHitTestVisible="True">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="5">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="kicker" Text="ПРЕДПРОСМОТР" />
+                  <TextBlock Text="{Binding DetailTitle}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="icon-button" FontSize="14" Content="⤢" ToolTip.Tip="{Binding DetailPanelToggleToolTip}" Click="ToggleDetailPanel_Click" />
+                <Button Grid.Column="2" Classes="icon-button" FontSize="16" Content="‹" IsEnabled="{Binding CanNavigateBack}" Click="Back_Click" ToolTip.Tip="Назад" />
+                <Button Grid.Column="3" Classes="icon-button" FontSize="16" Content="›" IsEnabled="{Binding CanNavigateForward}" Click="Forward_Click" ToolTip.Tip="Вперёд" />
+                <Button Grid.Column="4" Classes="icon-button" FontSize="16" Content="×" Click="CloseDetail_Click" ToolTip.Tip="Закрыть предпросмотр" />
+              </Grid>
+
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Border Classes="resource-badge" Background="#1C2531">
+                  <TextBlock Text="{Binding DetailTypeText}" FontSize="10" />
+                </Border>
+                <TextBlock Classes="muted" Text="{Binding DetailUsageText}" VerticalAlignment="Center" FontSize="11" />
+              </StackPanel>
+
+              <Border Background="#0D1117" BorderBrush="#202832" BorderThickness="1" CornerRadius="10" MinHeight="260" Height="{Binding DetailPreviewHeight}">
+                <Grid>
+                  <Image Source="{Binding DetailBitmap}" Stretch="Uniform" />
+                </Grid>
+              </Border>
+
+              <Border Classes="panel-soft" Padding="10">
+                <StackPanel Spacing="7">
+                  <TextBlock Classes="kicker" Text="ХАРАКТЕРИСТИКИ" />
+                  <TextBlock Classes="muted" Text="{Binding DetailSubtitle}" TextWrapping="Wrap" FontSize="12" />
+                </StackPanel>
+              </Border>
+
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+                <Button Classes="secondary" Content="Открыть папку" IsVisible="{Binding DetailCanOpenFolder}" Click="OpenDetailFolder_Click" />
+                <Button Grid.Column="1" Classes="secondary" Content="Скопировать путь" IsVisible="{Binding DetailCanCopyPath}" Click="CopyDetailPath_Click" />
+              </Grid>
+
+              <Border Classes="panel-soft" Padding="10">
+                <StackPanel Spacing="7">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Classes="kicker" Text="СВЯЗИ / РЕСУРСЫ" />
+                      <TextBlock Classes="muted" Text="Связанные изображения и ссылки" FontSize="11" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="secondary" FontSize="11" Padding="9,5"
+                            Content="{Binding DetailReferencesToggleText}"
+                            IsVisible="{Binding DetailHasReferenceList}"
+                            Click="ToggleDetailReferences_Click" />
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding DetailReferences}" IsVisible="{Binding DetailReferencesExpanded}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="local:ReferenceItemViewModel">
+                        <Border Background="#111720" BorderBrush="#222B36" BorderThickness="1" CornerRadius="7" Padding="8" Margin="0,0,0,6">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding KeyText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Classes="muted" Text="{Binding ValueText}" TextWrapping="Wrap" FontSize="11" />
+                            <TextBlock Classes="muted" Text="{Binding StatusText}" FontSize="10" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <Button Classes="secondary" Content="Открыть юнит" IsVisible="{Binding CanOpenUnit}" Tag="{Binding}" Click="ReferenceUnit_Click" />
+                              <Button Classes="secondary" Content="Открыть изображение" IsVisible="{Binding CanOpenImage}" Tag="{Binding}" Click="ReferenceImage_Click" />
+                            </StackPanel>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="kicker" Text="БИТЫЕ ССЫЛКИ" IsVisible="{Binding DetailHasMissingReferences}" />
+                  <ItemsControl ItemsSource="{Binding DetailMissingReferences}" IsVisible="{Binding DetailReferencesExpanded}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="local:ReferenceItemViewModel">
+                        <Border Background="#21191D" BorderBrush="#4B2A31" BorderThickness="1" CornerRadius="7" Padding="8" Margin="0,0,0,6">
+                          <StackPanel Spacing="3">
+                            <TextBlock Text="{Binding KeyText}" FontWeight="SemiBold" />
+                            <TextBlock Classes="muted" Text="{Binding ValueText}" TextWrapping="Wrap" FontSize="11" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+
+          </Border>
+        </Canvas>
+
+        <!-- Activity / scanning overlay -->
+        <Border x:Name="BusyOverlay"
+                Grid.Column="0"
+                Classes="busy-overlay"
+                IsVisible="True"
+                Opacity="{Binding BusyOverlayOpacity}"
+                IsHitTestVisible="{Binding BusyOverlayVisible}"
+                Padding="24"
+                ZIndex="100">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9" MaxWidth="460">
+            <TextBlock Text="{Binding BusyOverlayText}" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding ActivityIndicatorText}" Classes="muted" FontSize="17" HorizontalAlignment="Center" />
+            <TextBlock Text="Идёт обработка. Это может занять некоторое время." Classes="muted" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
           </StackPanel>
-          <TextBlock Classes="muted" Text="{Binding ModProgressText}" TextTrimming="CharacterEllipsis" />
-        </StackPanel>
-        <ProgressBar Grid.Column="1" Width="220" Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Classes="animated-progress" IsVisible="{Binding ProgressBarVisible}" VerticalAlignment="Center" />
-        <Button Grid.Column="2" Classes="secondary" Content="Остановить" IsVisible="{Binding IsScanning}" Click="Cancel_Click" VerticalAlignment="Center" />
+        </Border>
+
+        <Border Grid.Column="0"
+                Background="#151A22"
+                BorderBrush="#2A3441"
+                BorderThickness="1"
+                Padding="14,9"
+                IsVisible="{Binding ScanPanelVisible}"
+                VerticalAlignment="Bottom"
+                Margin="12"
+                CornerRadius="9"
+                ZIndex="90">
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+            <StackPanel Spacing="4">
+              <StackPanel Orientation="Horizontal" Spacing="9">
+                <TextBlock Classes="muted" Text="{Binding StatusText}" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" Text="{Binding ProgressText}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ActivityIndicatorText}" VerticalAlignment="Center" FontSize="16" />
+              </StackPanel>
+              <TextBlock Classes="muted" Text="{Binding ModProgressText}" TextTrimming="CharacterEllipsis" FontSize="11" />
+            </StackPanel>
+            <ProgressBar Grid.Column="1" Width="220" Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Classes="animated-progress" IsVisible="{Binding ProgressBarVisible}" VerticalAlignment="Center" />
+            <Button Grid.Column="2" Classes="secondary" Content="Остановить" IsVisible="{Binding IsScanning}" Click="Cancel_Click" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
       </Grid>
-    </Border>
+    </Grid>
   </Grid>
 </Window>

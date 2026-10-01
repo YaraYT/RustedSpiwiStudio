@@ -6,6 +6,7 @@ public static class UiAnimationService
     public static readonly TimeSpan ControlFadeDuration = TimeSpan.FromMilliseconds(145);
     public static readonly TimeSpan CardRevealDuration = TimeSpan.FromMilliseconds(170);
     public static readonly TimeSpan ThumbnailRevealDuration = TimeSpan.FromMilliseconds(145);
+    public static readonly TimeSpan DetailPanelResizeDuration = TimeSpan.FromMilliseconds(260);
 
     public static bool Enabled { get; private set; } = true;
 
@@ -32,6 +33,20 @@ public static class UiAnimationService
         window.Opacity = 0;
         window.Opened += (_, _) =>
             Avalonia.Threading.Dispatcher.UIThread.Post(() => window.Opacity = 1, Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    public static void PrepareWidthTransition(Control control, bool enabled, TimeSpan? duration = null)
+    {
+        control.Transitions = enabled
+            ? new Transitions
+            {
+                new DoubleTransition
+                {
+                    Property = Avalonia.Layout.Layoutable.WidthProperty,
+                    Duration = duration ?? DetailPanelResizeDuration
+                }
+            }
+            : null;
     }
 
     public static void PrepareOpacityTransition(Control control, bool enabled, TimeSpan? duration = null)

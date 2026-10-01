@@ -19,7 +19,7 @@ public sealed class ParsedIni
 public enum ResourceUsageFilter { All, Used, Unused }
 public sealed class AppConfig
 {
-    [JsonPropertyName("configVersion")] public int ConfigVersion { get; set; } = 12;
+    [JsonPropertyName("configVersion")] public int ConfigVersion { get; set; } = 15;
     [JsonPropertyName("modsRoot")] public string ModsRoot { get; set; } = string.Empty;
     [JsonPropertyName("rwmodExtraction")] public bool RwmodExtraction { get; set; } = true;
     [JsonPropertyName("imagePageSize")] public int ImagePageSize { get; set; } = 250;
@@ -34,6 +34,13 @@ public sealed class AppConfig
     [JsonPropertyName("indexParallelism")] public int IndexParallelism { get; set; } = Math.Max(1, Environment.ProcessorCount - 2);
     [JsonPropertyName("computeParallelism")] public int ComputeParallelism { get; set; } = Math.Max(1, Environment.ProcessorCount - 1);
     [JsonPropertyName("dangerousMode")] public bool DangerousMode { get; set; }
+    [JsonPropertyName("aggressivePhotoLoading")] public bool AggressivePhotoLoading { get; set; }
+    [JsonPropertyName("photoMemoryLimitMb")] public int PhotoMemoryLimitMb { get; set; } = 1024;
+    [JsonPropertyName("aggressiveCardLoading")] public bool AggressiveCardLoading { get; set; }
+    [JsonPropertyName("cardMemoryLimitMb")] public int CardMemoryLimitMb { get; set; } = 512;
+    [JsonPropertyName("predictionEnabled")] public bool PredictionEnabled { get; set; } = true;
+    [JsonPropertyName("predictionDepth")] public int PredictionDepth { get; set; } = 2;
+    [JsonPropertyName("backgroundPrediction")] public bool BackgroundPrediction { get; set; } = true;
 }
 
 
@@ -87,6 +94,14 @@ public static class AppChangelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries =
     [
+        new("0.1.5", "1 октября 2026",
+        [
+            "Добавлена ограниченная система предугадывания следующих карточек и предпросмотров без массовой загрузки всей выдачи в память.",
+            "Добавлены настраиваемая глубина предугадывания 1–5 и фоновый режим с минимальным влиянием на интерфейс.",
+            "Исправлено удержание миниатюр и отмена фоновых декодирований, чтобы длительная работа с галереей не накапливала память.",
+            "Фильтры возвращены к обычным галочкам без синей подсветки строк; все варианты выбираются по умолчанию.",
+            "Финальная версия 0.1.5 синхронизирована с релизной конфигурацией."
+        ]),
         new("0.1.4", "1 октября 2026",
         [
             "Укреплена стабильность запуска Native AOT-сборки и работы с native-зависимостями.",

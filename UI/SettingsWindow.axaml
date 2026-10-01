@@ -1,111 +1,259 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="RustedShpizhionStudio.UI.SettingsWindow"
-        Width="700" Height="800" MinWidth="560" MinHeight="560"
+        Width="760" Height="760" MinWidth="640" MinHeight="580"
         CanResize="False" WindowStartupLocation="CenterOwner"
         WindowDecorations="None"
         Title="Настройки Rusted Шпижион Студия">
-  <Border Background="#15181E" BorderBrush="#2A303B" BorderThickness="1" Padding="18">
+  <Border Background="#151920" BorderBrush="#29323F" BorderThickness="1" Padding="20">
     <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14">
       <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
         <StackPanel Spacing="2">
           <TextBlock Text="Настройки" FontSize="22" FontWeight="SemiBold" />
-          <TextBlock Classes="muted" Text="Параметры интерфейса и сканирования" />
+          <TextBlock Classes="muted" Text="Управление источником, интерфейсом и индексированием" />
         </StackPanel>
-        <Button Grid.Column="1" Classes="secondary" Content="×" FontSize="18" Padding="10,4" Click="Cancel_Click" />
+        <Button Grid.Column="1" Classes="icon-button" Content="×" FontSize="20" Click="Cancel_Click" ToolTip.Tip="Закрыть" />
       </Grid>
 
-      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="12">
-          <Border Background="#1B1F27" BorderBrush="#272D38" BorderThickness="1" CornerRadius="8" Padding="14">
-            <StackPanel Spacing="9">
-              <TextBlock Text="Источник" FontSize="16" FontWeight="SemiBold" />
-              <DockPanel>
-                <Button DockPanel.Dock="Right" Content="Выбрать…" Margin="8,0,0,0" Click="Browse_Click" />
-                <TextBox x:Name="RootBox" PlaceholderText="Папка mods/units" />
-              </DockPanel>
-            </StackPanel>
-          </Border>
-
-          <Border Background="#1B1F27" BorderBrush="#272D38" BorderThickness="1" CornerRadius="8" Padding="14">
-            <StackPanel Spacing="10">
-              <TextBlock Text="Производительность" FontSize="16" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" Text="Больше параллельных задач ускоряют индексацию, но увеличивают нагрузку на CPU, RAM и диск." TextWrapping="Wrap" />
-              <CheckBox x:Name="ParallelIndexingBox" Content="Разрешить параллельную индексацию" />
-              <Grid ColumnDefinitions="*,180" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
-                <TextBlock Text="Параллельных задач индексирования" VerticalAlignment="Center" />
-                <NumericUpDown Grid.Column="1" x:Name="IndexParallelismBox" Minimum="1" Maximum="128" Increment="1" Value="4" FormatString="0" />
-                <TextBlock Grid.Row="1" Text="Параллельных вычислений / парсинга" VerticalAlignment="Center" />
-                <NumericUpDown Grid.Row="1" Grid.Column="1" x:Name="ComputeParallelismBox" Minimum="1" Maximum="128" Increment="1" Value="4" FormatString="0" />
-              </Grid>
-              <Border Background="#241E13" BorderBrush="#5A4520" BorderThickness="1" CornerRadius="6" Padding="10">
-                <TextBlock Classes="muted" Text="При включённой параллельности во время индексации компьютер может заметно замедлиться или временно перестать нормально реагировать на управление." TextWrapping="Wrap" />
+      <TabControl Grid.Row="1" Margin="0,2,0,0">
+        <TabItem Header="Общие">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+            <StackPanel Spacing="12">
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="9">
+                  <TextBlock Classes="kicker" Text="ИСТОЧНИК" />
+                  <TextBlock Text="Папка модификаций" FontSize="16" FontWeight="SemiBold" />
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="secondary" Content="Выбрать…" Margin="8,0,0,0" Click="Browse_Click" />
+                    <TextBox x:Name="RootBox" PlaceholderText="Папка mods/units" />
+                  </DockPanel>
+                  <TextBlock Classes="muted" Text="Источник должен указывать именно на папку units внутри модификации." TextWrapping="Wrap" FontSize="11" />
+                  <Button Classes="secondary" Content="Создать ярлык на рабочем столе" Click="CreateShortcut_Click" HorizontalAlignment="Left" Margin="0,2,0,0" />
+                  <TextBlock Classes="muted" Text="Ярлык будет указывать на текущий EXE и его рабочую папку. Удобно для установки программы у друга." TextWrapping="Wrap" FontSize="11" />
+                </StackPanel>
               </Border>
-              <Border Background="#271719" BorderBrush="#5C292E" BorderThickness="1" CornerRadius="6" Padding="10">
-                <StackPanel Spacing="7">
-                  <CheckBox x:Name="DangerousModeBox" Content="Опасный режим" />
-                  <TextBlock Classes="muted" Text="Максимальная загрузка CPU, повышенный приоритет процесса и агрессивный SQLite-кэш в оперативной памяти. Windows и другие программы могут стать заметно менее отзывчивыми." TextWrapping="Wrap" />
+
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="kicker" Text="СКАНИРОВАНИЕ" />
+                  <ToggleSwitch x:Name="RwmodBox" OnContent="Предлагать распаковку .rwmod" OffContent="Предлагать распаковку .rwmod" />
+                  <ToggleSwitch x:Name="HideBrokenBox" OnContent="Скрывать битые ссылки" OffContent="Скрывать битые ссылки" />
                 </StackPanel>
               </Border>
             </StackPanel>
-          </Border>
+          </ScrollViewer>
+        </TabItem>
 
-          <Border Background="#1B1F27" BorderBrush="#272D38" BorderThickness="1" CornerRadius="8" Padding="14">
-            <StackPanel Spacing="10">
-              <TextBlock Text="Отображение" FontSize="16" FontWeight="SemiBold" />
-              <Grid ColumnDefinitions="*,180" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
-                <TextBlock Text="Оконный режим" VerticalAlignment="Center" />
-                <ComboBox Grid.Column="1" x:Name="WindowModeBox">
-                  <ComboBoxItem Content="Окно, на весь рабочий экран" Tag="windowed" />
-                  <ComboBoxItem Content="Окно без рамки" Tag="borderless" />
-                  <ComboBoxItem Content="Полноэкранный режим" Tag="fullscreen" />
-                </ComboBox>
-                <TextBlock Grid.Row="1" Text="Карточек в ряд / режим" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="LayoutBox">
-                  <ComboBoxItem Content="2 карточки" Tag="grid-2" />
-                  <ComboBoxItem Content="3 карточки" Tag="grid-3" />
-                  <ComboBoxItem Content="4 карточки" Tag="grid-4" />
-                  <ComboBoxItem Content="5 карточек" Tag="grid-5" />
-                  <ComboBoxItem Content="Списком, по линиям" Tag="list" />
-                </ComboBox>
-                <TextBlock Grid.Row="2" Text="Изображений на один шаг" VerticalAlignment="Center" />
-                <NumericUpDown Grid.Row="2" Grid.Column="1" x:Name="PageSizeBox" Minimum="50" Maximum="1000" Increment="50" Value="250" FormatString="0" />
-                <TextBlock Grid.Row="3" Text="Свободная область вокруг изображения" VerticalAlignment="Center" />
-                <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*,48" ColumnSpacing="8" MinWidth="180">
-                  <Slider x:Name="PaddingBox" Minimum="2" Maximum="35" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
-                  <Border Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" MinWidth="42">
-                    <TextBlock x:Name="PaddingText" Classes="muted" HorizontalAlignment="Center" />
-                  </Border>
+        <TabItem Header="Интерфейс">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+            <StackPanel Spacing="12">
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="11">
+                  <TextBlock Classes="kicker" Text="ОКНО" />
+                  <Grid ColumnDefinitions="*,250" ColumnSpacing="14">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Оконный режим" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Как студия размещается на рабочем столе." FontSize="11" />
+                    </StackPanel>
+                    <ComboBox Grid.Column="1" x:Name="WindowModeBox" MinWidth="240">
+                      <ComboBoxItem Content="Окно, на весь рабочий экран" Tag="windowed" />
+                      <ComboBoxItem Content="Окно без рамки" Tag="borderless" />
+                      <ComboBoxItem Content="Полноэкранный режим" Tag="fullscreen" />
+                    </ComboBox>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="11">
+                  <TextBlock Classes="kicker" Text="КАРТОЧКИ" />
+                  <Grid ColumnDefinitions="*,250" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="12">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Карточек в ряд / режим" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Определяет плотность галереи." FontSize="11" />
+                    </StackPanel>
+                    <ComboBox Grid.Row="0" Grid.Column="1" x:Name="LayoutBox">
+                      <ComboBoxItem Content="2 карточки" Tag="grid-2" />
+                      <ComboBoxItem Content="3 карточки" Tag="grid-3" />
+                      <ComboBoxItem Content="4 карточки" Tag="grid-4" />
+                      <ComboBoxItem Content="5 карточек" Tag="grid-5" />
+                      <ComboBoxItem Content="Списком, по линиям" Tag="list" />
+                    </ComboBox>
+
+                    <StackPanel Grid.Row="1" Spacing="2">
+                      <TextBlock Text="Изображений на один шаг" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Сколько результатов показывать за одну загрузку." FontSize="11" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="5">
+                      <Button Classes="secondary" Content="−" Tag="page:-1" Click="NumericStep_Click" Width="38" />
+                      <NumericUpDown Grid.Column="1" x:Name="PageSizeBox" Minimum="50" Maximum="1000" Increment="50" Value="250" FormatString="0" ShowButtonSpinner="False" HorizontalContentAlignment="Center" />
+                      <Button Grid.Column="2" Classes="secondary" Content="+" Tag="page:1" Click="NumericStep_Click" Width="38" />
+                    </Grid>
+
+                    <StackPanel Grid.Row="2" Spacing="2">
+                      <TextBlock Text="Свободная область вокруг изображения" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Размер визуального отступа внутри превью." FontSize="11" />
+                    </StackPanel>
+                    <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,54" ColumnSpacing="8">
+                      <Slider x:Name="PaddingBox" Minimum="2" Maximum="35" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                      <Border Grid.Column="1" Background="#11161D" BorderBrush="#252D39" BorderThickness="1" CornerRadius="6" Padding="5">
+                        <TextBlock x:Name="PaddingText" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                    </Grid>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="panel" Padding="15">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="10">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="Нормализация изображения" FontWeight="SemiBold" />
+                    <TextBlock Classes="muted" Text="Выравнивает свободную область вокруг превью." FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1" x:Name="NormalizeBox" OnContent="" OffContent="" />
+                  <StackPanel Grid.Row="1" Spacing="2">
+                    <TextBlock Text="Анимации интерфейса" FontWeight="SemiBold" />
+                    <TextBlock Classes="muted" Text="Плавные появления и перестроения элементов." FontSize="11" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Row="1" Grid.Column="1" x:Name="ShowAnimationsBox" OnContent="" OffContent="" />
                 </Grid>
-                <TextBlock Grid.Row="4" Text="Нормализация изображения" VerticalAlignment="Center" />
-                <CheckBox Grid.Row="4" Grid.Column="1" x:Name="NormalizeBox" Content="Включена" />
-                <TextBlock Grid.Row="5" Text="Анимации интерфейса" VerticalAlignment="Center" />
-                <CheckBox Grid.Row="5" Grid.Column="1" x:Name="ShowAnimationsBox" Content="Показывать" />
-              </Grid>
+              </Border>
             </StackPanel>
-          </Border>
+          </ScrollViewer>
+        </TabItem>
 
-          <Border Background="#1B1F27" BorderBrush="#272D38" BorderThickness="1" CornerRadius="8" Padding="14">
-            <StackPanel Spacing="10">
-              <TextBlock Text="Сканирование и предпросмотр" FontSize="16" FontWeight="SemiBold" />
-              <CheckBox x:Name="RwmodBox" Content="Предлагать распаковку .rwmod" />
-              <CheckBox x:Name="HideBrokenBox" Content="Не отображать битые ссылки" />
-            </StackPanel>
-          </Border>
+        <TabItem Header="Производительность">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+            <StackPanel Spacing="12">
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="11">
+                  <TextBlock Classes="kicker" Text="ИНДЕКСАЦИЯ" />
+                  <ToggleSwitch x:Name="ParallelIndexingBox" OnContent="Параллельная индексация" OffContent="Параллельная индексация" />
+                  <TextBlock Classes="muted" Text="Больше параллельных задач ускоряют индексацию, но увеличивают нагрузку на CPU, RAM и диск." TextWrapping="Wrap" FontSize="11" />
 
-          <Border Background="#26191B" BorderBrush="#5C292E" BorderThickness="1" CornerRadius="8" Padding="14">
-            <StackPanel Spacing="8">
-              <TextBlock Text="База индекса" FontSize="16" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" Text="Удаляет index.db и связанные WAL/SHM-файлы из корневой папки программы. Настройки и ресурсы программы не удаляются." TextWrapping="Wrap" />
-              <Button Classes="danger" Content="Уничтожить базу индекса" Click="DeleteDatabase_Click" HorizontalAlignment="Left" />
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="9" Margin="0,2,0,0">
+                    <TextBlock Text="Параллельных задач индексирования" VerticalAlignment="Center" />
+                    <Grid Grid.Column="1" ColumnDefinitions="Auto,120,Auto" ColumnSpacing="5">
+                      <Button Classes="secondary" Content="−" Tag="index:-1" Click="NumericStep_Click" Width="36" />
+                      <NumericUpDown Grid.Column="1" x:Name="IndexParallelismBox" Minimum="1" Maximum="128" Increment="1" Value="4" FormatString="0" ShowButtonSpinner="False" HorizontalContentAlignment="Center" />
+                      <Button Grid.Column="2" Classes="secondary" Content="+" Tag="index:1" Click="NumericStep_Click" Width="36" />
+                    </Grid>
+                    <TextBlock Grid.Row="1" Text="Параллельных вычислений / парсинга" VerticalAlignment="Center" />
+                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,120,Auto" ColumnSpacing="5">
+                      <Button Classes="secondary" Content="−" Tag="compute:-1" Click="NumericStep_Click" Width="36" />
+                      <NumericUpDown Grid.Column="1" x:Name="ComputeParallelismBox" Minimum="1" Maximum="128" Increment="1" Value="4" FormatString="0" ShowButtonSpinner="False" HorizontalContentAlignment="Center" />
+                      <Button Grid.Column="2" Classes="secondary" Content="+" Tag="compute:1" Click="NumericStep_Click" Width="36" />
+                    </Grid>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="kicker" Text="ФОТОГРАФИИ" />
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="10">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Агрессивная подготовка изображений" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Перед показом выдачи заранее декодирует миниатюры в фоне, чтобы быстрая прокрутка не вызывала массовую загрузку с диска." TextWrapping="Wrap" FontSize="11" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" x:Name="AggressivePhotoBox" OnContent="" OffContent="" />
+
+                    <StackPanel Grid.Row="1" Spacing="2">
+                      <TextBlock Text="Лимит памяти на подготовленные изображения" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Настраивается от 1 ГБ до 2 ГБ. Используется с запасом, чтобы не отбирать всю оперативную память у Windows." TextWrapping="Wrap" FontSize="11" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,120,Auto" ColumnSpacing="5">
+                      <Button Classes="secondary" Content="−" Tag="photo:-256" Click="NumericStep_Click" Width="36" />
+                      <NumericUpDown Grid.Column="1" x:Name="PhotoMemoryLimitBox" Minimum="1024" Maximum="2048" Increment="256" Value="1024" FormatString="0" ShowButtonSpinner="False" HorizontalContentAlignment="Center" />
+                      <Button Grid.Column="2" Classes="secondary" Content="+" Tag="photo:256" Click="NumericStep_Click" Width="36" />
+                    </Grid>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="kicker" Text="КАРТОЧКИ" />
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="10">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Агрессивная подготовка карточек" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Заранее загружает карточки текущей выдачи в память, чтобы пролистывание не ждало дополнительной работы с базой данных." TextWrapping="Wrap" FontSize="11" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" x:Name="AggressiveCardsBox" OnContent="" OffContent="" />
+
+                    <StackPanel Grid.Row="1" Spacing="2">
+                      <TextBlock Text="Лимит памяти на карточки" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Настраивается от 512 МБ до 1 ГБ. Это мягкий лимит кэша данных карточек, а не жёсткий лимит всей памяти процесса." TextWrapping="Wrap" FontSize="11" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,120,Auto" ColumnSpacing="5">
+                      <Button Classes="secondary" Content="−" Tag="card:-128" Click="NumericStep_Click" Width="36" />
+                      <NumericUpDown Grid.Column="1" x:Name="CardMemoryLimitBox" Minimum="512" Maximum="1024" Increment="128" Value="512" FormatString="0" ShowButtonSpinner="False" HorizontalContentAlignment="Center" />
+                      <Button Grid.Column="2" Classes="secondary" Content="+" Tag="card:128" Click="NumericStep_Click" Width="36" />
+                    </Grid>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="kicker" Text="ПРЕДУГАДЫВАНИЕ" />
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="10">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Система предугадывания" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Предварительно готовит только ближайшие карточки и предпросмотры вместо загрузки всей выдачи в память." TextWrapping="Wrap" FontSize="11" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" x:Name="PredictionEnabledBox" OnContent="" OffContent="" />
+
+                    <StackPanel Grid.Row="1" Spacing="2">
+                      <TextBlock Text="Глубина предугадывания" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="От 1 до 5 шагов вперёд относительно направления прокрутки." TextWrapping="Wrap" FontSize="11" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,120,Auto" ColumnSpacing="5">
+                      <Button Classes="secondary" Content="−" Tag="prediction:-1" Click="NumericStep_Click" Width="36" />
+                      <NumericUpDown Grid.Column="1" x:Name="PredictionDepthBox" Minimum="1" Maximum="5" Increment="1" Value="2" FormatString="0" ShowButtonSpinner="False" HorizontalContentAlignment="Center" />
+                      <Button Grid.Column="2" Classes="secondary" Content="+" Tag="prediction:1" Click="NumericStep_Click" Width="36" />
+                    </Grid>
+
+                    <StackPanel Grid.Row="2" Spacing="2">
+                      <TextBlock Text="Фоновое предугадывание" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="Ждёт короткую паузу после прокрутки и работает с низким приоритетом, чтобы не мешать интерфейсу." TextWrapping="Wrap" FontSize="11" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Row="2" Grid.Column="1" x:Name="BackgroundPredictionBox" OnContent="" OffContent="" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="danger-zone" BorderThickness="1,0,0,0" Padding="15">
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="kicker" Text="DANGER ZONE" Foreground="#D16D79" />
+                  <ToggleSwitch x:Name="DangerousModeBox" OnContent="Опасный режим" OffContent="Опасный режим" />
+                  <TextBlock Classes="muted" Text="Максимальная загрузка CPU и агрессивный SQLite-кэш. Windows и другие программы могут стать менее отзывчивыми." TextWrapping="Wrap" FontSize="11" />
+                </StackPanel>
+              </Border>
             </StackPanel>
-          </Border>
-        </StackPanel>
-      </ScrollViewer>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Обслуживание">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+            <StackPanel Spacing="12">
+              <Border Classes="panel" Padding="15">
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="kicker" Text="БАЗА ИНДЕКСА" />
+                  <TextBlock Text="Пересоздание индекса" FontSize="16" FontWeight="SemiBold" />
+                  <TextBlock Classes="muted" Text="Удаляет index.db и связанные WAL/SHM-файлы. Конфиг, исходные моды и программа не затрагиваются." TextWrapping="Wrap" FontSize="11" />
+                  <Button Classes="danger-outline" Content="Уничтожить базу индекса" Click="DeleteDatabase_Click" HorizontalAlignment="Left" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+      </TabControl>
 
       <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
         <TextBlock Grid.Column="0" x:Name="StatusText" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" />
-        <Button Grid.Column="1" Content="Отмена" Click="Cancel_Click" />
+        <Button Grid.Column="1" Classes="secondary" Content="Отмена" Click="Cancel_Click" />
         <Button Grid.Column="2" Classes="primary" Content="Сохранить" Click="Save_Click" />
       </Grid>
     </Grid>

@@ -75,7 +75,6 @@ jobs:
             "publish\libSkiaSharp.dll",
             "publish\libHarfBuzzSharp.dll",
             "publish\av_libglesv2.dll",
-            "publish\favicon.ico",
             "publish\resources\rusted_warfare_docs.db"
           )
           $missing = @($required | Where-Object { -not (Test-Path $_) })
@@ -89,7 +88,6 @@ jobs:
               "libSkiaSharp.dll",
               "libHarfBuzzSharp.dll",
               "av_libglesv2.dll",
-              "favicon.ico",
               "resources\rusted_warfare_docs.db"
             ) -DestinationPath (Join-Path $PWD "..\$zipName") -CompressionLevel Optimal -Force
           } finally { Pop-Location }

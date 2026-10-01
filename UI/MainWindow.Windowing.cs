@@ -9,6 +9,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             ToggleFullscreen();
             e.Handled = true;
         }
+        else if (e.Key == Key.Escape && DetailVisible)
+        {
+            _ = CloseDetailAsync();
+            e.Handled = true;
+        }
         else if (e.Key == Key.Escape && WindowState == WindowState.FullScreen)
         {
             ApplyWindowMode(Config.WindowMode == "fullscreen" ? "windowed" : Config.WindowMode);

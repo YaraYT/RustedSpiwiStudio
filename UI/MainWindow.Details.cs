@@ -5,9 +5,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task<Bitmap?> LoadPreviewAsync(long? imageId, int width = 1200, CancellationToken ct = default)
     {
         if (imageId is null || _db is null) return null;
-        var row = _db.GetImage(imageId.GetValueOrDefault())?.Image;
+        if (TryTakePredictedPreview(imageId.Value, out var cached)) return cached;
+        var row = (await _db.GetImageAsync(imageId.GetValueOrDefault(), ct))?.Image;
         if (row is null) return null;
         return await ImageItemViewModel.LoadBitmapAsync(row, width, ct);
+    }
+
+    private bool TryTakePredictedPreview(long id, out Bitmap? bitmap)
+    {
+        if (_predictedPreviewCache.Remove(id, out bitmap)) return true;
+        bitmap = null;
+        return false;
+    }
+
+    private void TrimPredictedPreviewCache()
+    {
+        var max = Math.Clamp(Config.PredictionDepth, 1, 5) * 2;
+        while (_predictedPreviewCache.Count > max)
+        {
+            var victimId = _predictedPreviewCache.Keys.First();
+            if (_predictedPreviewCache.Remove(victimId, out var bitmap)) bitmap.Dispose();
+        }
     }
     private async Task NavigateToDetailAsync(DetailRoute route)
     {
@@ -20,6 +38,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         PushLimited(_backHistory, _currentRoute);
         _forwardHistory.Clear();
         _currentRoute = route;
+        ExpandDetailPanel();
         OnPropertyChanged(nameof(CanNavigateBack));
         OnPropertyChanged(nameof(CanNavigateForward));
     }
@@ -29,6 +48,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (_currentRoute == DetailRoute.Empty) return;
         if (!await RenderDetailAsync(DetailRoute.Empty)) return;
         _currentRoute = DetailRoute.Empty;
+        IsDetailPanelExpanded = false;
+        SetDetailPanelWidth(360);
         _backHistory.Clear();
         _forwardHistory.Clear();
         OnPropertyChanged(nameof(CanNavigateBack));
@@ -57,6 +78,59 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(CanNavigateForward));
     }
 
+    private void ExpandDetailPanel()
+    {
+        if (!DetailVisible) return;
+        IsDetailPanelExpanded = true;
+        SetDetailPanelWidth(CalculateExpandedDetailWidth());
+        OnPropertyChanged(nameof(DetailPreviewHeight));
+    }
+
+    private void CollapseDetailPanel()
+    {
+        if (!DetailVisible || !IsDetailPanelExpanded) return;
+        IsDetailPanelExpanded = false;
+        SetDetailPanelWidth(360);
+        OnPropertyChanged(nameof(DetailPreviewHeight));
+    }
+
+    private async void CloseDetail_Click(object? sender, RoutedEventArgs e)
+    {
+        try { await CloseDetailAsync(); }
+        catch (Exception ex) { AppLog.Error("CloseDetail_Click", ex); }
+        e.Handled = true;
+    }
+
+    private void ToggleDetailPanel_Click(object? sender, RoutedEventArgs e)
+    {
+        if (!DetailVisible) return;
+        if (IsDetailPanelExpanded) CollapseDetailPanel();
+        else ExpandDetailPanel();
+    }
+
+    private void SetDetailPanelWidth(double width)
+    {
+        // DetailPanel is hosted by a Canvas. Its width no longer participates in the
+        // gallery Grid measurement, so changing it cannot move or remeasure cards.
+        // The transition is prepared once when the window is created.
+        DetailPanelWidth = Math.Clamp(width, 350, 920);
+    }
+
+    private void UpdateDetailPanelOverlayBounds()
+    {
+        if (DetailPanel is null || WorkspaceGrid is null) return;
+        DetailPanel.Height = Math.Max(0, WorkspaceGrid.Bounds.Height);
+    }
+
+    private double CalculateExpandedDetailWidth()
+    {
+        var total = WorkspaceGrid.Bounds.Width;
+        if (total <= 0) return 520;
+        var half = total * 0.50;
+        var max = Math.Max(350, Math.Min(920, total - 340));
+        return Math.Max(350, Math.Min(max, half));
+    }
+
     private static void PushLimited(Stack<DetailRoute> stack, DetailRoute route)
     {
         stack.Push(route);
@@ -83,25 +157,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         DetailMissingReferences.Clear();
         DetailReferencesExpanded = false;
         OnPropertyChangedAllDetails();
+        UpdateDetailPanelOverlayBounds();
 
-        switch (route.Kind)
+        var rendered = route.Kind switch
         {
-            case DetailRouteKind.None:
-                return true;
-            case DetailRouteKind.Image:
-                return await RenderImageDetailAsync(route.Id, detailToken);
-            case DetailRouteKind.Missing:
-                return RenderMissingDetail(route.Id);
-            case DetailRouteKind.Unit:
-                return await RenderUnitDetailAsync(route.Id, detailToken);
-            default:
-                return false;
+            DetailRouteKind.None => true,
+            DetailRouteKind.Image => await RenderImageDetailAsync(route.Id, detailToken),
+            DetailRouteKind.Missing => await RenderMissingDetailAsync(route.Id, detailToken),
+            DetailRouteKind.Unit => await RenderUnitDetailAsync(route.Id, detailToken),
+            _ => false
+        };
+
+        if (rendered && route.Kind == DetailRouteKind.Image)
+            ScheduleDetailPrediction(route.Id);
+        else if (route.Kind == DetailRouteKind.None)
+        {
+            _detailPredictionCts?.Cancel();
+            _detailPredictionCts?.Dispose();
+            _detailPredictionCts = null;
         }
+
+        return rendered;
     }
 
     private async Task<bool> RenderImageDetailAsync(long id, CancellationToken detailToken)
     {
-        var details = _db!.GetImage(id);
+        var details = await _db!.GetImageAsync(id, detailToken);
         if (details is null) return false;
         _selectedItem = Items.FirstOrDefault(x => x.Row.Id == id);
         var row = details.Image;
@@ -121,9 +202,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return true;
     }
 
-    private bool RenderMissingDetail(long id)
+    private async Task<bool> RenderMissingDetailAsync(long id, CancellationToken detailToken)
     {
-        var missing = _db!.GetMissingReference(id);
+        var missing = await _db!.GetMissingReferenceAsync(id, detailToken);
         if (missing is null) return false;
         _detailFolder = string.Empty;
         DetailVisible = true;
@@ -138,7 +219,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task<bool> RenderUnitDetailAsync(long id, CancellationToken detailToken)
     {
-        var unit = _db!.GetUnit(id);
+        var unit = await _db!.GetUnitAsync(id, detailToken);
         if (unit is null) return false;
         _selectedUnit = unit;
         var iniFull = Path.GetFullPath(Path.Combine(unit.RootPath, unit.IniPath.Replace('/', Path.DirectorySeparatorChar)));

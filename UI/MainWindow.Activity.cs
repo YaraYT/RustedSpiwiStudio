@@ -35,6 +35,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (OperationCanceledException) { }
     }
 
+    private void SetBusyIndicatorPhase(string text)
+    {
+        _busyBaseText = text;
+        BusyOverlayText = text;
+        OnPropertyChanged(nameof(BusyOverlayText));
+        if (BusyOverlayVisible)
+        {
+            ResultSummary = text;
+            OnPropertyChanged(nameof(ResultSummary));
+        }
+    }
+
     private void StopBusyIndicator()
     {
         _busyIndicatorRunning = false;
@@ -81,6 +93,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(DetailUsageText));
         OnPropertyChanged(nameof(DetailBitmap));
         OnPropertyChanged(nameof(DetailVisible));
+        OnPropertyChanged(nameof(DetailPreviewHeight));
         OnPropertyChanged(nameof(DetailHasMissingReferences));
         OnPropertyChanged(nameof(DetailHasReferenceList));
         OnPropertyChanged(nameof(DetailReferencesToggleText));

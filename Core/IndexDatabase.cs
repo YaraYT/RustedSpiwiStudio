@@ -185,10 +185,28 @@ CREATE INDEX IF NOT EXISTS idx_maps_image ON maps(image_id);
 
     public Stats GetStats()
     {
-        using var c = OpenReadOnly(); c.Open();
-        int Get(string sql) { using var cmd = c.CreateCommand(); cmd.CommandText = sql; return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture); }
-        return new(Get("SELECT COUNT(*) FROM mods"), Get("SELECT COUNT(*) FROM files"), Get("SELECT COUNT(*) FROM images"), Get("SELECT COUNT(*) FROM image_references WHERE status='ok'"), Get("SELECT COUNT(*) FROM images WHERE NOT EXISTS (SELECT 1 FROM image_references r WHERE r.image_id=images.id AND r.status='ok') AND images.resource_type <> 'map'"), Get("SELECT COUNT(*) FROM image_references WHERE status='missing'"), Get("SELECT COUNT(*) FROM maps"), HasIndexedDataInternal(c));
+        using var c = OpenReadOnly();
+        c.Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = """
+            SELECT
+                (SELECT COUNT(*) FROM mods),
+                (SELECT COUNT(*) FROM files),
+                (SELECT COUNT(*) FROM images),
+                (SELECT COUNT(*) FROM image_references WHERE status='ok'),
+                (SELECT COUNT(*) FROM images WHERE NOT EXISTS (SELECT 1 FROM image_references r WHERE r.image_id=images.id AND r.status='ok') AND images.resource_type <> 'map'),
+                (SELECT COUNT(*) FROM image_references WHERE status='missing'),
+                (SELECT COUNT(*) FROM maps),
+                EXISTS(SELECT 1 FROM images LIMIT 1);
+            """;
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return new(0, 0, 0, 0, 0, 0, 0, false);
+        return new(
+            r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetInt32(3),
+            r.GetInt32(4), r.GetInt32(5), r.GetInt32(6), r.GetInt32(7) != 0);
     }
+
+    public Task<Stats> GetStatsAsync(CancellationToken ct = default) => Task.Run(GetStats, ct);
 
     private static bool HasIndexedDataInternal(SqliteConnection c)
     {
@@ -203,6 +221,8 @@ CREATE INDEX IF NOT EXISTS idx_maps_image ON maps(image_id);
         while (r.Read()) result.Add(new(r.GetInt64(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4)));
         return result;
     }
+
+    public Task<List<ModInfo>> GetModsAsync(CancellationToken ct = default) => Task.Run(GetMods, ct);
 
     public SearchResult SearchImages(string query, IReadOnlyList<string> resourceTypes, IReadOnlyList<string> resourceSubtypes,
         int limit, int offset, IReadOnlyList<long> modIds, bool hideBroken, ResourceUsageFilter usageFilter, bool brokenOnly = false)
@@ -282,6 +302,16 @@ CREATE INDEX IF NOT EXISTS idx_maps_image ON maps(image_id);
         if (hasMore) rows.RemoveAt(rows.Count - 1);
         return new(rows, hasMore);
     }
+
+    public Task<SearchResult> SearchImagesAsync(
+        string query, IReadOnlyList<string> resourceTypes, IReadOnlyList<string> resourceSubtypes,
+        int limit, int offset, IReadOnlyList<long> modIds, bool hideBroken, ResourceUsageFilter usageFilter,
+        bool brokenOnly = false, CancellationToken ct = default)
+        => Task.Run(() => SearchImages(query, resourceTypes, resourceSubtypes, limit, offset, modIds, hideBroken, usageFilter, brokenOnly), ct);
+
+    public Task<ImageDetails?> GetImageAsync(long id, CancellationToken ct = default) => Task.Run(() => GetImage(id), ct);
+    public Task<UnitDetails?> GetUnitAsync(long id, CancellationToken ct = default) => Task.Run(() => GetUnit(id), ct);
+    public Task<MissingReference?> GetMissingReferenceAsync(long id, CancellationToken ct = default) => Task.Run(() => GetMissingReference(id), ct);
 
     public ImageDetails? GetImage(long id)
     {

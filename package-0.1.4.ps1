@@ -1,11 +1,10 @@
-param([string]$PublishDir = "publish", [string]$Output = "RustedSpiwiStudio-0.1.4-win-x64.zip")
+param([string]$PublishDir = "publish", [string]$Output = "RustedSpiwiStudio-0.1.5-win-x64.zip")
 $ErrorActionPreference = "Stop"
 $required = @(
   "RustedShpizhionStudio.exe",
   "libSkiaSharp.dll",
   "libHarfBuzzSharp.dll",
   "av_libglesv2.dll",
-  "favicon.ico",
   "resources\rusted_warfare_docs.db"
 )
 foreach ($file in $required) {
@@ -19,8 +18,7 @@ try {
     "libSkiaSharp.dll",
     "libHarfBuzzSharp.dll",
     "av_libglesv2.dll",
-    "favicon.ico",
-    "resources\rusted_warfare_docs.db"
+      "resources\rusted_warfare_docs.db"
   ) -DestinationPath (Join-Path (Get-Location) $Output) -CompressionLevel Optimal
 } finally { Pop-Location }
 $hash = (Get-FileHash -Path $Output -Algorithm SHA256).Hash.ToLowerInvariant()

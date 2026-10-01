@@ -52,8 +52,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try { _busyVisibilityCts?.Cancel(); _busyVisibilityCts?.Dispose(); } catch { }
         try { _cardDeliveryCts?.Cancel(); _cardDeliveryCts?.Dispose(); } catch { }
         try { _scrollDebounceCts?.Cancel(); _scrollDebounceCts?.Dispose(); } catch { }
+        try { _predictionCts?.Cancel(); _predictionCts?.Dispose(); } catch { }
+        try { _detailPredictionCts?.Cancel(); _detailPredictionCts?.Dispose(); } catch { }
         try { foreach (var vm in Items) vm.Dispose(); } catch { }
         try { DetailBitmap = null; } catch { }
+        try { foreach (var bitmap in _predictedPreviewCache.Values) bitmap.Dispose(); _predictedPreviewCache.Clear(); } catch { }
         try { _busyTimer.Stop(); _thumbnailTimer.Stop(); } catch { }
     }
 }

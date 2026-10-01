@@ -27,6 +27,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         InitializeResourceFilters();
         UiAnimationService.SetEnabled(Config.ShowAnimations);
         UiAnimationService.PrepareOpacityTransition(BusyOverlay, Config.ShowAnimations, UiAnimationService.ControlFadeDuration);
+        UiAnimationService.PrepareWidthTransition(DetailPanel, Config.ShowAnimations, UiAnimationService.DetailPanelResizeDuration);
         ApplyWindowMode(Config.WindowMode);
         // Конструирование схемы и проверка совместимости индекса могут быть тяжёлыми.
         // Не делаем это на UI-потоке.
@@ -94,7 +95,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (_db is null) return;
         var db = _db;
-        var s = await Task.Run(db.GetStats);
+        var s = await db.GetStatsAsync();
         AppLog.Info($"Stats: mods={s.Mods} files={s.Files} images={s.Images} refs={s.References} missing={s.Missing}");
         HasIndexedData = s.HasIndexedData;
         _missingReferencesCount = s.Missing;
@@ -115,13 +116,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ModFilters.Clear();
         if (_db is null) return;
         var db = _db;
-        var mods = await Task.Run(db.GetMods);
+        var mods = await db.GetModsAsync();
         foreach (var m in mods)
         {
-            var item = new ModFilterItem(m.Id, m.Name, false);
+            var item = new ModFilterItem(m.Id, m.Name, true);
             item.PropertyChanged += ModFilterChanged;
             ModFilters.Add(item);
         }
+        OnPropertyChanged(nameof(ModsFilterSummary));
     }
     // ── Кнопка версии → окно «Что нового» ──────────────────────────────────
     private async void Version_Click(object? sender, RoutedEventArgs e)
@@ -216,6 +218,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _configPath = await _configService.SaveAsync(Config);
         UiAnimationService.SetEnabled(Config.ShowAnimations);
         UiAnimationService.PrepareOpacityTransition(BusyOverlay, Config.ShowAnimations, UiAnimationService.ControlFadeDuration);
+        UiAnimationService.PrepareWidthTransition(DetailPanel, Config.ShowAnimations, UiAnimationService.DetailPanelResizeDuration);
         ApplyWindowMode(Config.WindowMode);
         ApplyCardLayout();
         await RefreshModsAsync();

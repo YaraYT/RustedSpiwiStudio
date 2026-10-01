@@ -25,8 +25,9 @@ public sealed class ModFilterItem : INotifyPropertyChanged
 
 public sealed class ImageItemViewModel : INotifyPropertyChanged
 {
-    private static readonly SemaphoreSlim ThumbnailSemaphore = new(4, 4);
+    private static readonly SemaphoreSlim ThumbnailSemaphore = new(6, 6);
     private Task? _thumbnailTask;
+    private CancellationTokenSource? _thumbnailLoadCts;
     public ImageRow Row { get; }
     public string Filename => Row.Filename;
     public string PathAndMod => $"{Row.ModName} · {Row.RelativePath}";
@@ -35,6 +36,38 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
     public string ResourceTypeDisplay => $"{ResourceType} · {ResourceSubtype}";
     public string ResourceSubtype => Row.ResourceSubtype switch { "unit:tower"=>"Башня", "unit:body"=>"Тело", "unit:chassis"=>"Шасси", "unit:projectile"=>"Снаряды", "unit:active_ability"=>"Активные способности", "unit:effect"=>"Эффекты", "unit:corpse"=>"Трупы", "unit:other"=>"Другое", "building:body"=>"Основное тело", "building:tower"=>"Башня", "building:weapon"=>"Оружие", "building:ammunition"=>"Боеприпасы", "building:active_ability"=>"Активные способности", "building:effect"=>"Эффекты", "building:other"=>"Прочее", "map"=>"Карта", _=>"Другое" };
     public string FullPath => Path.GetFullPath(Path.Combine(Row.RootPath, Row.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+    public bool IsThumbnailLoading => _thumbnailTask is { IsCompleted: false };
+
+    public long EstimateCardMemoryBytes()
+    {
+        var stringChars = (long)Row.Filename.Length
+                        + Row.ModName.Length
+                        + Row.RelativePath.Length
+                        + Row.RootPath.Length
+                        + Row.ResourceType.Length
+                        + Row.ResourceSubtype.Length
+                        + Row.Sha256.Length;
+
+        // Conservative soft estimate for the VM, its ImageRow record, string references
+        // and the small amount of UI metadata kept with a virtualized card. It is a
+        // budgeting heuristic, not a hard process-memory cap.
+        return 8192L + stringChars * sizeof(char);
+    }
+
+    public long EstimateThumbnailBytes(int width)
+    {
+        width = Math.Clamp(width, 160, 900);
+        var sourceWidth = Row.Width.GetValueOrDefault(width);
+        var sourceHeight = Row.Height.GetValueOrDefault(width);
+        if (sourceWidth <= 0) sourceWidth = width;
+        if (sourceHeight <= 0) sourceHeight = width;
+        var scale = Math.Min(1d, (double)width / sourceWidth);
+        var decodedWidth = Math.Max(1L, (long)Math.Round(sourceWidth * scale));
+        var decodedHeight = Math.Max(1L, (long)Math.Round(sourceHeight * scale));
+        var pixels = Math.Min(long.MaxValue / 4, decodedWidth * decodedHeight);
+        return Math.Min(long.MaxValue / 2, pixels * 4);
+    }
     private Bitmap? _thumbnail;
     private bool _thumbnailFailed;
     private bool _disposed;
@@ -110,11 +143,15 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
     {
         if (_disposed || Thumbnail is not null) return Task.CompletedTask;
         if (_thumbnailTask is { IsCompleted: false }) return _thumbnailTask;
-        _thumbnailTask = LoadThumbnailCoreAsync(Math.Clamp(width, 160, 900), ct);
+
+        _thumbnailLoadCts?.Cancel();
+        _thumbnailLoadCts?.Dispose();
+        _thumbnailLoadCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _thumbnailTask = LoadThumbnailCoreAsync(Math.Clamp(width, 160, 900), _thumbnailLoadCts.Token, _thumbnailLoadCts);
         return _thumbnailTask;
     }
 
-    private async Task LoadThumbnailCoreAsync(int width, CancellationToken ct)
+    private async Task LoadThumbnailCoreAsync(int width, CancellationToken ct, CancellationTokenSource ownerCts)
     {
         try
         {
@@ -122,46 +159,60 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
             {
                 Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
+                    if (_disposed || ct.IsCancellationRequested) return;
                     _thumbnailFailed = true;
                     PropertyChanged?.Invoke(this, new(nameof(IsThumbnailPlaceholderVisible)));
                     PropertyChanged?.Invoke(this, new(nameof(IsThumbnailErrorVisible)));
                 });
                 return;
             }
-            await ThumbnailSemaphore.WaitAsync(ct);
+
+            await ThumbnailSemaphore.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                ct.ThrowIfCancellationRequested();
                 Exception? last = null;
                 for (var attempt = 0; attempt < 2; attempt++)
                 {
                     try
                     {
-                        await using var fs = new FileStream(FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 64 * 1024, useAsync: true);
-                        var bitmap = Bitmap.DecodeToWidth(fs, width, BitmapInterpolationMode.LowQuality);
+                        var path = FullPath;
+                        var bitmap = await Task.Run(() =>
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 64 * 1024, useAsync: false);
+                            return Bitmap.DecodeToWidth(fs, width, BitmapInterpolationMode.LowQuality);
+                        }, ct).ConfigureAwait(false);
+
                         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                         {
-                            if (_disposed || ct.IsCancellationRequested) { bitmap.Dispose(); return; }
+                            if (_disposed || ct.IsCancellationRequested)
+                            {
+                                bitmap.Dispose();
+                                return;
+                            }
                             _thumbnailFailed = false;
                             Thumbnail = bitmap;
                         });
                         return;
                     }
+                    catch (OperationCanceledException) { throw; }
                     catch (Exception ex) when (attempt == 0)
                     {
                         last = ex;
-                        await Task.Delay(35, ct);
+                        await Task.Delay(35, ct).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
                         last = ex;
                     }
                 }
-                if (last is not null)
+
+                if (last is not null && !ct.IsCancellationRequested)
                 {
                     AppLog.Warn($"Thumbnail decode failed for '{FullPath}': {last.Message}");
                     Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                     {
+                        if (_disposed || ct.IsCancellationRequested) return;
                         _thumbnailFailed = true;
                         PropertyChanged?.Invoke(this, new(nameof(IsThumbnailPlaceholderVisible)));
                         PropertyChanged?.Invoke(this, new(nameof(IsThumbnailErrorVisible)));
@@ -175,7 +226,31 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
         {
             AppLog.Warn($"Thumbnail load failed for '{FullPath}': {ex.Message}");
         }
-        finally { _thumbnailTask = null; }
+        finally
+        {
+            if (ReferenceEquals(_thumbnailLoadCts, ownerCts))
+            {
+                _thumbnailLoadCts = null;
+                _thumbnailTask = null;
+            }
+            ownerCts.Dispose();
+        }
+    }
+
+    public void UnloadThumbnail()
+    {
+        if (_disposed) return;
+        _thumbnailLoadCts?.Cancel();
+        var thumbnail = Interlocked.Exchange(ref _thumbnail, null);
+        try { thumbnail?.Dispose(); } catch { }
+        if (thumbnail is not null)
+        {
+            _thumbnailFailed = false;
+            PropertyChanged?.Invoke(this, new(nameof(Thumbnail)));
+            PropertyChanged?.Invoke(this, new(nameof(IsThumbnailPlaceholderVisible)));
+            PropertyChanged?.Invoke(this, new(nameof(IsThumbnailErrorVisible)));
+            PropertyChanged?.Invoke(this, new(nameof(ThumbnailOpacity)));
+        }
     }
 
     public void HideCardForAnimation() => CardOpacity = 0;
@@ -185,6 +260,12 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
     {
         if (_disposed) return;
         _disposed = true;
+        _thumbnailLoadCts?.Cancel();
+        if (_thumbnailTask is null)
+        {
+            try { _thumbnailLoadCts?.Dispose(); } catch { }
+            _thumbnailLoadCts = null;
+        }
         var thumbnail = Interlocked.Exchange(ref _thumbnail, null);
         try { thumbnail?.Dispose(); } catch { }
         _thumbnailTask = null;
@@ -192,17 +273,20 @@ public sealed class ImageItemViewModel : INotifyPropertyChanged
 
     public static async Task<Bitmap?> LoadBitmapAsync(ImageRow row, int width, CancellationToken ct = default)
     {
-        var path=Path.GetFullPath(Path.Combine(row.RootPath,row.RelativePath.Replace('/',Path.DirectorySeparatorChar)));
-        if(!File.Exists(path)) return null;
-        await ThumbnailSemaphore.WaitAsync(ct);
+        var path = Path.GetFullPath(Path.Combine(row.RootPath, row.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!File.Exists(path)) return null;
+        await ThumbnailSemaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            await using var fs=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete,64 * 1024,useAsync:true);
-            ct.ThrowIfCancellationRequested();
-            return Bitmap.DecodeToWidth(fs,Math.Clamp(width,320,1800),BitmapInterpolationMode.HighQuality);
+            return await Task.Run(() =>
+            {
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 64 * 1024, useAsync: false);
+                ct.ThrowIfCancellationRequested();
+                return Bitmap.DecodeToWidth(fs, Math.Clamp(width, 320, 1800), BitmapInterpolationMode.HighQuality);
+            }, ct).ConfigureAwait(false);
         }
-        catch(OperationCanceledException) { return null; }
-        catch(Exception ex){ AppLog.Warn($"Preview decode failed for '{path}': {ex.Message}"); return null; }
+        catch (OperationCanceledException) { return null; }
+        catch (Exception ex) { AppLog.Warn($"Preview decode failed for '{path}': {ex.Message}"); return null; }
         finally { ThumbnailSemaphore.Release(); }
     }
 

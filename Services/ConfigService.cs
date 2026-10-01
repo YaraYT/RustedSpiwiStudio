@@ -118,7 +118,7 @@ public sealed class ConfigService
 
     private static void Normalize(AppConfig config)
     {
-        config.ConfigVersion = 12;
+        config.ConfigVersion = 15;
         var safeIndexDefault = Math.Max(1, Environment.ProcessorCount - 2);
         var safeComputeDefault = Math.Max(1, Environment.ProcessorCount - 1);
         config.IndexParallelism = Math.Clamp(config.IndexParallelism <= 0 ? safeIndexDefault : config.IndexParallelism, 1, Math.Max(1, Environment.ProcessorCount));
@@ -133,5 +133,8 @@ public sealed class ConfigService
         config.CardLayout = config.CardLayout is "grid-2" or "grid-3" or "grid-4" or "grid-5" or "list" ? config.CardLayout : "grid-3";
         config.NormalizePadding = Math.Clamp(config.NormalizePadding, 2, 35);
         config.WindowMode = config.WindowMode is "windowed" or "borderless" or "fullscreen" ? config.WindowMode : "windowed";
+        config.PhotoMemoryLimitMb = Math.Clamp(config.PhotoMemoryLimitMb <= 0 ? 1024 : config.PhotoMemoryLimitMb, 1024, 2048);
+        config.CardMemoryLimitMb = Math.Clamp(config.CardMemoryLimitMb <= 0 ? 512 : config.CardMemoryLimitMb, 512, 1024);
+        config.PredictionDepth = Math.Clamp(config.PredictionDepth <= 0 ? 2 : config.PredictionDepth, 1, 5);
     }
 }

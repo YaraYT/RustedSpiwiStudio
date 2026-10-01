@@ -14,6 +14,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private CancellationTokenSource? _thumbnailCts;
     private readonly Queue<ImageItemViewModel> _thumbnailQueue = new();
     private readonly HashSet<ImageItemViewModel> _thumbnailQueued = [];
+    private readonly Queue<ImageItemViewModel> _predictionQueue = new();
+    private readonly HashSet<ImageItemViewModel> _predictionQueued = [];
+    private CancellationTokenSource? _predictionCts;
+    private CancellationTokenSource? _detailPredictionCts;
+    private int _scrollDirection = 1;
     private bool _thumbnailBatchRunning;
     private readonly DispatcherTimer _thumbnailTimer;
     private bool _brokenOnly;
@@ -44,6 +49,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly Stack<DetailRoute> _forwardHistory = new();
     private DetailRoute _currentRoute = DetailRoute.Empty;
     private bool _updatePromptShown;
+    private bool _detailPanelExpanded;
+    private double _detailPanelWidth = 360;
+    private readonly Dictionary<long, Bitmap> _predictedPreviewCache = new();
+    private bool _modsFilterExpanded = true;
+    private bool _resourceTypesFilterExpanded = true;
+    private bool _resourceSubtypesFilterExpanded;
+    private bool _stateFilterExpanded;
 
     public ObservableCollection<ImageItemViewModel> Items { get; } = [];
     public ObservableCollection<ModFilterItem> ModFilters { get; } = [];
@@ -54,6 +66,44 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public AppConfig Config { get => _config; private set { _config = value; OnPropertyChanged(); OnPropertyChanged(nameof(CardItemWidth)); OnPropertyChanged(nameof(CardItemHeight)); OnPropertyChanged(nameof(ProgressBarVisible)); } }
     public string SearchQuery { get => _searchQuery; set { _searchQuery = value; OnPropertyChanged(); } }
+    public bool IsDetailPanelExpanded
+    {
+        get => _detailPanelExpanded;
+        private set
+        {
+            if (_detailPanelExpanded == value) return;
+            _detailPanelExpanded = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DetailPanelToggleToolTip));
+        }
+    }
+    public double DetailPanelWidth
+    {
+        get => _detailPanelWidth;
+        private set
+        {
+            var next = Math.Round(value);
+            if (Math.Abs(_detailPanelWidth - next) < 1) return;
+            _detailPanelWidth = next;
+            OnPropertyChanged();
+        }
+    }
+    public double DetailPreviewHeight => IsDetailPanelExpanded ? 360 : 280;
+    public string DetailPanelToggleToolTip => IsDetailPanelExpanded ? "Вернуть компактный предпросмотр" : "Расширить предпросмотр до половины рабочего пространства";
+
+    public bool IsModsFilterExpanded { get => _modsFilterExpanded; set { if (_modsFilterExpanded == value) return; _modsFilterExpanded = value; OnPropertyChanged(); OnPropertyChanged(nameof(ModsFilterGlyph)); } }
+    public bool IsResourceTypesFilterExpanded { get => _resourceTypesFilterExpanded; set { if (_resourceTypesFilterExpanded == value) return; _resourceTypesFilterExpanded = value; OnPropertyChanged(); OnPropertyChanged(nameof(ResourceTypesFilterGlyph)); } }
+    public bool IsResourceSubtypesFilterExpanded { get => _resourceSubtypesFilterExpanded; set { if (_resourceSubtypesFilterExpanded == value) return; _resourceSubtypesFilterExpanded = value; OnPropertyChanged(); OnPropertyChanged(nameof(ResourceSubtypesFilterGlyph)); } }
+    public bool IsStateFilterExpanded { get => _stateFilterExpanded; set { if (_stateFilterExpanded == value) return; _stateFilterExpanded = value; OnPropertyChanged(); OnPropertyChanged(nameof(StateFilterGlyph)); } }
+    public string ModsFilterGlyph => IsModsFilterExpanded ? "⌄" : "›";
+    public string ResourceTypesFilterGlyph => IsResourceTypesFilterExpanded ? "⌄" : "›";
+    public string ResourceSubtypesFilterGlyph => IsResourceSubtypesFilterExpanded ? "⌄" : "›";
+    public string StateFilterGlyph => IsStateFilterExpanded ? "⌄" : "›";
+    public string ModsFilterSummary => FilterSummary(ModFilters.Count, ModFilters.Count(x => x.IsSelected));
+    public string ResourceTypesFilterSummary => FilterSummary(ResourceTypeFilters.Count, ResourceTypeFilters.Count(x => x.IsSelected));
+    public string ResourceSubtypesFilterSummary => FilterSummary(ResourceSubtypeFilters.Count, ResourceSubtypeFilters.Count(x => x.IsSelected));
+    private static string FilterSummary(int total, int selected) => total == 0 ? "Нет вариантов" : selected == 0 ? "Не выбрано" : selected == total ? "Все" : $"{selected} выбрано";
+
     public bool IsFiltersPanelVisible
     {
         get => _isFiltersPanelVisible;
@@ -201,11 +251,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Add("building:other", "Прочее", "Здания");
         Add("map", "Карта", "Карты");
         Add("other", "Другое", "Не определено");
+        OnPropertyChanged(nameof(ResourceTypesFilterSummary));
+        OnPropertyChanged(nameof(ResourceSubtypesFilterSummary));
     }
 
     private void ResourceFilterChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ResourceFilterItem.IsSelected) && _loaded && !IsScanning) _ = DebouncedSearchAsync();
+        if (e.PropertyName != nameof(ResourceFilterItem.IsSelected)) return;
+        OnPropertyChanged(nameof(ResourceTypesFilterSummary));
+        OnPropertyChanged(nameof(ResourceSubtypesFilterSummary));
+        if (_loaded && !IsScanning) _ = DebouncedSearchAsync();
     }
 
     private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));

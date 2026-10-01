@@ -1,4 +1,4 @@
-# Port status: Rusted Шпижион Студия 0.1.4
+# Port status: Rusted Шпижион Студия 0.1.5
 
 ## Revision 3
 
@@ -49,7 +49,7 @@ A real `dotnet build/publish` could not be executed in the working environment b
 - Primary/subtype resource filters added.
 - Portable index deletion and confirmation dialogs added.
 
-## 0.1.5-alpha
+## 0.1.5
 
 - Memory lifecycle fixes for card thumbnails and detail previews.
 - Config file save moved off the UI thread to avoid long interface stalls.

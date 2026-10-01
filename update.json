@@ -1,32 +1,44 @@
 {
   "channel": "stable",
-  "version": "0.1.4",
-  "title": "Rusted Шпижион Студия 0.1.4",
-  "date": "2026-10-01T00:00:00Z",
-  "releaseUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/tag/v0.1.4",
-  "downloadUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/download/v0.1.4/RustedSpiwiStudio-0.1.4-win-x64.zip",
-  "assetName": "RustedSpiwiStudio-0.1.4-win-x64.zip",
+  "version": "0.1.5",
+  "title": "Rusted Шпижион Студия 0.1.5",
+  "date": "2026-10-01T20:45:00Z",
+  "releaseUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/tag/v0.1.5",
+  "downloadUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/download/v0.1.5/RustedSpiwiStudio-0.1.5-win-x64.zip",
+  "assetName": "RustedSpiwiStudio-0.1.5-win-x64.zip",
   "sha256": "",
   "changes": [
-    "Укреплена стабильность запуска Native AOT-сборки и работы с native-зависимостями.",
-    "Автообновление переведено на ZIP-пакет с полной опубликованной сборкой и проверкой SHA-256.",
-    "Исправлены ошибки частичного сохранения результата при неудачном commit и освобождения миниатюр.",
-    "Исправлены несколько простых узких мест индексатора и обработки .rwmod."
+    "Добавлена ограниченная система предугадывания следующих карточек и предпросмотров без массовой загрузки всей выдачи в память.",
+    "Добавлены глубина предугадывания 1–5 и фоновый режим.",
+    "Исправлено удержание миниатюр и отмена фоновых декодирований.",
+    "Фильтры возвращены к обычным галочкам, все варианты выбираются по умолчанию."
   ],
   "history": [
     {
+      "version": "0.1.5",
+      "title": "Rusted Шпижион Студия 0.1.5",
+      "date": "2026-10-01T20:45:00Z",
+      "releaseUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/tag/v0.1.5",
+      "downloadUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/download/v0.1.5/RustedSpiwiStudio-0.1.5-win-x64.zip",
+      "assetName": "RustedSpiwiStudio-0.1.5-win-x64.zip",
+      "sha256": "",
+      "changes": [
+        "Добавлена ограниченная система предугадывания следующих карточек и предпросмотров без массовой загрузки всей выдачи в память.",
+        "Добавлены глубина предугадывания 1–5 и фоновый режим.",
+        "Исправлено удержание миниатюр и отмена фоновых декодирований.",
+        "Фильтры возвращены к обычным галочкам, все варианты выбираются по умолчанию."
+      ]
+    },
+    {
       "version": "0.1.4",
       "title": "Rusted Шпижион Студия 0.1.4",
-      "date": "2026-10-01T00:00:00Z",
+      "date": "2026-10-01T19:01:35Z",
       "releaseUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/tag/v0.1.4",
       "downloadUrl": "https://github.com/YaraYT/RustedSpiwiStudio/releases/download/v0.1.4/RustedSpiwiStudio-0.1.4-win-x64.zip",
       "assetName": "RustedSpiwiStudio-0.1.4-win-x64.zip",
-      "sha256": "",
+      "sha256": "9afe1bfbc21256c30248737ab6a9c173ddf3006a6578047fccd544905c1deea9",
       "changes": [
-        "Укреплена стабильность запуска Native AOT-сборки и работы с native-зависимостями.",
-        "Автообновление переведено на ZIP-пакет с полной опубликованной сборкой и проверкой SHA-256.",
-        "Исправлены ошибки частичного сохранения результата при неудачном commit и освобождения миниатюр.",
-        "Исправлены несколько простых узких мест индексатора и обработки .rwmod."
+        "- Сохранён Native AOT, отключён PublishSingleFile - Релизы переведены на ZIP с native-зависимостями - Переработана система автоматического обновления - Добавлена проверка SHA-256 и ограничение повторных попыток обновления - Исправлены проблемы с SQLite commit и частичным сохранением - Исправлено освобождение thumbnail-ресурсов - Обновлены P/Invoke и regex для совместимости с Native AOT - Выполнены небольшие оптимизации индексатора - Синхронизированы версия 0.1.4, changelog и release workflow"
       ]
     },
     {

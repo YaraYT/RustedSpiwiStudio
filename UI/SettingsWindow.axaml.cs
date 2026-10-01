@@ -8,13 +8,13 @@ public partial class SettingsWindow : Window
     public AppConfig? Result { get; private set; }
     public bool DeleteDatabaseRequested { get; private set; }
 
-    private readonly record struct CheckboxSnapshot(bool Parallel, bool Dangerous, bool Normalize, bool Animations, bool Rwmod, bool HideBroken);
+    private readonly record struct CheckboxSnapshot(bool Parallel, bool Dangerous, bool Normalize, bool Animations, bool Rwmod, bool HideBroken, bool AggressivePhotos, int PhotoMemoryLimitMb, bool AggressiveCards, int CardMemoryLimitMb, bool PredictionEnabled, int PredictionDepth, bool BackgroundPrediction);
 
     public SettingsWindow(AppConfig config)
     {
         InitializeComponent();
         _config = config;
-        _initialCheckboxes = new(config.ParallelIndexing, config.DangerousMode, config.NormalizeImages, config.ShowAnimations, config.RwmodExtraction, config.HideBroken);
+        _initialCheckboxes = new(config.ParallelIndexing, config.DangerousMode, config.NormalizeImages, config.ShowAnimations, config.RwmodExtraction, config.HideBroken, config.AggressivePhotoLoading, config.PhotoMemoryLimitMb, config.AggressiveCardLoading, config.CardMemoryLimitMb, config.PredictionEnabled, config.PredictionDepth, config.BackgroundPrediction);
         UiAnimationService.PrepareWindow(this, config.ShowAnimations);
 
         RootBox.Text = config.ModsRoot;
@@ -33,6 +33,13 @@ public partial class SettingsWindow : Window
         IndexParallelismBox.Value = config.IndexParallelism;
         ComputeParallelismBox.Value = config.ComputeParallelism;
         DangerousModeBox.IsChecked = config.DangerousMode;
+        AggressivePhotoBox.IsChecked = config.AggressivePhotoLoading;
+        PhotoMemoryLimitBox.Value = config.PhotoMemoryLimitMb;
+        AggressiveCardsBox.IsChecked = config.AggressiveCardLoading;
+        CardMemoryLimitBox.Value = config.CardMemoryLimitMb;
+        PredictionEnabledBox.IsChecked = config.PredictionEnabled;
+        PredictionDepthBox.Value = config.PredictionDepth;
+        BackgroundPredictionBox.IsChecked = config.BackgroundPrediction;
         UpdatePerformanceControls();
 
         ParallelIndexingBox.IsCheckedChanged += (_, _) => UpdatePerformanceControls();
@@ -44,6 +51,31 @@ public partial class SettingsWindow : Window
         {
             if (Screens.Primary is { } primary) Height = Math.Min(800, Math.Max(560, primary.WorkingArea.Height - 40));
         };
+    }
+
+
+    private void NumericStep_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string tag) return;
+        var parts = tag.Split(':', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2 || !int.TryParse(parts[1], out var amount)) return;
+
+        var control = parts[0].ToLowerInvariant() switch
+        {
+            "page" => PageSizeBox,
+            "index" => IndexParallelismBox,
+            "compute" => ComputeParallelismBox,
+            "photo" => PhotoMemoryLimitBox,
+            "card" => CardMemoryLimitBox,
+            "prediction" => PredictionDepthBox,
+            _ => null
+        };
+        if (control is null) return;
+
+        var current = control.Value ?? control.Minimum;
+        var next = current + (parts[0].Equals("photo", StringComparison.OrdinalIgnoreCase) ? amount : control.Increment * amount);
+        next = Math.Clamp(next, control.Minimum, control.Maximum);
+        control.Value = next;
     }
 
     private async void Browse_Click(object? sender, RoutedEventArgs e)
@@ -77,7 +109,14 @@ public partial class SettingsWindow : Window
         || _initialCheckboxes.Normalize != (NormalizeBox.IsChecked == true)
         || _initialCheckboxes.Animations != (ShowAnimationsBox.IsChecked == true)
         || _initialCheckboxes.Rwmod != (RwmodBox.IsChecked == true)
-        || _initialCheckboxes.HideBroken != (HideBrokenBox.IsChecked == true);
+        || _initialCheckboxes.HideBroken != (HideBrokenBox.IsChecked == true)
+        || _initialCheckboxes.AggressivePhotos != (AggressivePhotoBox.IsChecked == true)
+        || _initialCheckboxes.PhotoMemoryLimitMb != (int)Math.Round(PhotoMemoryLimitBox.Value ?? _initialCheckboxes.PhotoMemoryLimitMb)
+        || _initialCheckboxes.AggressiveCards != (AggressiveCardsBox.IsChecked == true)
+        || _initialCheckboxes.CardMemoryLimitMb != (int)Math.Round(CardMemoryLimitBox.Value ?? _initialCheckboxes.CardMemoryLimitMb)
+        || _initialCheckboxes.PredictionEnabled != (PredictionEnabledBox.IsChecked == true)
+        || _initialCheckboxes.PredictionDepth != (int)Math.Round(PredictionDepthBox.Value ?? _initialCheckboxes.PredictionDepth)
+        || _initialCheckboxes.BackgroundPrediction != (BackgroundPredictionBox.IsChecked == true);
 
     private void UpdatePerformanceControls()
     {
@@ -101,6 +140,23 @@ public partial class SettingsWindow : Window
         StatusText.Text = "База будет удалена после закрытия настроек.";
         _allowClose = true;
         Close();
+    }
+
+    private async void CreateShortcut_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            StatusText.Text = "Создание ярлыка…";
+            var result = await DesktopShortcutService.CreateAsync();
+            StatusText.Text = result.Success
+                ? $"Ярлык создан: {result.Path}"
+                : $"Не удалось создать ярлык: {result.Error}";
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("Create desktop shortcut failed", ex);
+            StatusText.Text = $"Ошибка создания ярлыка: {ex.Message}";
+        }
     }
 
     private void Save_Click(object? sender, RoutedEventArgs e)
@@ -129,6 +185,13 @@ public partial class SettingsWindow : Window
         _config.IndexParallelism = Math.Clamp((int)Math.Round(IndexParallelismBox.Value ?? _config.IndexParallelism), 1, Math.Max(1, Environment.ProcessorCount));
         _config.ComputeParallelism = Math.Clamp((int)Math.Round(ComputeParallelismBox.Value ?? _config.ComputeParallelism), 1, Math.Max(1, Environment.ProcessorCount));
         _config.DangerousMode = DangerousModeBox.IsChecked == true;
+        _config.AggressivePhotoLoading = AggressivePhotoBox.IsChecked == true;
+        _config.PhotoMemoryLimitMb = Math.Clamp((int)Math.Round(PhotoMemoryLimitBox.Value ?? _config.PhotoMemoryLimitMb), 1024, 2048);
+        _config.AggressiveCardLoading = AggressiveCardsBox.IsChecked == true;
+        _config.CardMemoryLimitMb = Math.Clamp((int)Math.Round(CardMemoryLimitBox.Value ?? _config.CardMemoryLimitMb), 512, 1024);
+        _config.PredictionEnabled = PredictionEnabledBox.IsChecked == true;
+        _config.PredictionDepth = Math.Clamp((int)Math.Round(PredictionDepthBox.Value ?? _config.PredictionDepth), 1, 5);
+        _config.BackgroundPrediction = BackgroundPredictionBox.IsChecked == true;
 
         UiAnimationService.SetEnabled(_config.ShowAnimations);
         Result = _config;
