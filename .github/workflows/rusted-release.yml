@@ -32,7 +32,7 @@ jobs:
           $previousVersion = ""
           $before = "${{ github.event.before }}"
           if ($before -and $before -ne "0000000000000000000000000000000000000000") {
-            $previousPath = "$before:RustedShpizhionStudio.csproj"
+            $previousPath = "${before}:RustedShpizhionStudio.csproj"
             git cat-file -e $previousPath 2>$null
             if ($LASTEXITCODE -eq 0) {
               $previousText = git show $previousPath 2>$null
