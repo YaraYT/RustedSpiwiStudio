@@ -30,13 +30,35 @@ jobs:
           if (-not $currentMatch.Success) { throw "Не найден <Version>." }
           $currentVersion = $currentMatch.Groups[1].Value.Trim()
           $previousVersion = ""
-          if ("${{ github.event.before }}" -ne "0000000000000000000000000000000000000000") {
-            try {
-              $previousText = git show "${{ github.event.before }}:RustedShpizhionStudio.csproj"
-              $previousMatch = [regex]::Match($previousText, '<Version>([^<]+)</Version>')
-              if ($previousMatch.Success) { $previousVersion = $previousMatch.Groups[1].Value.Trim() }
-            } catch { }
+          $before = "${{ github.event.before }}"
+          if ($before -and $before -ne "0000000000000000000000000000000000000000") {
+            $previousPath = "$before:RustedShpizhionStudio.csproj"
+            git cat-file -e $previousPath 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              $previousText = git show $previousPath 2>$null
+              if ($LASTEXITCODE -eq 0) {
+                $previousMatch = [regex]::Match(($previousText -join [Environment]::NewLine), '<Version>([^<]+)</Version>')
+                if ($previousMatch.Success) {
+                  $previousVersion = $previousMatch.Groups[1].Value.Trim()
+                }
+              }
+            }
           }
+
+          # Резервный путь: если файла не было в предыдущем коммите или история
+          # была перестроена, извлекаем старую версию из diff между before и HEAD.
+          if (-not $previousVersion -and $before -and $before -ne "0000000000000000000000000000000000000000") {
+            $diff = git diff --unified=0 $before HEAD -- RustedShpizhionStudio.csproj 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              $removedVersion = $diff |
+                Where-Object { $_ -match '^-.*<Version>([^<]+)</Version>' } |
+                Select-Object -First 1
+              if ($removedVersion -and $removedVersion -match '<Version>([^<]+)</Version>') {
+                $previousVersion = $Matches[1].Trim()
+              }
+            }
+          }
+
           "version=$currentVersion" >> $env:GITHUB_OUTPUT
           "previous=$previousVersion" >> $env:GITHUB_OUTPUT
           "changed=$([string]::CompareOrdinal($currentVersion, $previousVersion) -ne 0)" >> $env:GITHUB_OUTPUT
